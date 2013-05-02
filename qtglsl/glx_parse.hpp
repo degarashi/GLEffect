@@ -174,7 +174,7 @@ struct VaryEntry : EntryBase {
 //! Uniform宣言エントリ
 struct UnifEntry : EntryBase {
 	boost::optional<std::string>	sizeSem;
-	boost::optional<boost::variant<std::vector<float>, std::string>>	defStr;
+	boost::optional<boost::variant<std::vector<float>, float, bool>>	defStr;
 
 	void output(std::ostream& os) const;
 };
