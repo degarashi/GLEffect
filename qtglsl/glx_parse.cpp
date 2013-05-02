@@ -24,7 +24,7 @@ GR_Glx::GR_Glx(): GR_Glx::base_type(rlGLX, "OpenGL_effect_parser") {
 	rlVec %= '[' > +qi::float_ > ']';
 	rlMacroEnt %= rlNameToken > -('=' > rlNameToken) > ';';
 	rlConstEnt = -(GLPrecision[at_c<0>(_val)=_1]) >> GLType[at_c<1>(_val)=_1] >> rlNameToken[at_c<2>(_val)=_1] >>
-		lit('=') > (rlVec[at_c<3>(_val)=_1] | qi::float_[push_back(at_c<3>(_val),_1)]) > ';';
+		  lit('=') > (qi::bool_[at_c<3>(_val)=_1] | rlVec[at_c<3>(_val)=_1] | qi::float_[at_c<3>(_val)=_1]) > ';';
 	rlBoolSet %= qi::no_case[GLBoolsetting] > '=' > qi::no_case[qi::bool_] > ';';
 	rlValueSet %= qi::no_case[GLSetting] > '=' >
 			qi::repeat(1,4)[qi::no_case[GLColormask] | qi::uint_ | qi::float_ | qi::bool_] > ';';

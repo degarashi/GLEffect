@@ -1,4 +1,5 @@
 #include "glx_parse.hpp"
+#include <boost/lexical_cast.hpp>
 
 namespace {
 	const static char* c_shType[] = {"VertexShader", "GeometryShader", "PixelShader"};
@@ -26,12 +27,32 @@ void UnifEntry::output(std::ostream& os) const {
 }
 
 void ConstEntry::output(std::ostream& os) const {
-	EntryBase::output(os, "const ", ' ');
-	os << "=(";
-	int nV = defVal.size();
-	for(int i=0 ; i<nV-1 ; i++)
-		os << defVal[i] << ',';
-	os << defVal.back() << ");";
+	EntryBase::output(os, "const ", '=');
+
+	struct Tmp : boost::static_visitor<> {
+		std::ostream& _dst;
+		Tmp(std::ostream& dst): _dst(dst) {}
+
+		void operator()(bool b) {
+			// bool, floatの時は値だけを出力
+			_dst << boost::lexical_cast<bool>(b);
+		}
+		void operator()(float v) {
+			_dst << boost::lexical_cast<float>(v);
+		}
+		void operator()(const std::vector<float>& v) {
+			// ベクトル値は括弧を付ける
+			int nV = v.size();
+			_dst << boost::lexical_cast<int>(nV) << '(';
+			for(int i=0 ; i<nV-1 ; i++)
+				_dst << boost::lexical_cast<float>(v[i]) << ',';
+			_dst << boost::lexical_cast<float>(v.back()) << ')';
+		}
+	};
+
+	Tmp tmp(os);
+	boost::apply_visitor(tmp, defVal);
+	os << ';';
 }
 
 void ShStruct::output(std::ostream& os) const {

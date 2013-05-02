@@ -180,7 +180,7 @@ struct UnifEntry : EntryBase {
 };
 //! Const宣言エントリ
 struct ConstEntry : EntryBase {
-	std::vector<float>			defVal;
+	boost::variant<bool, float, std::vector<float>>		defVal;
 
 	void output(std::ostream& os) const;
 };
