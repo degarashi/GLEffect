@@ -133,6 +133,40 @@ void ShStruct::swap(ShStruct& a) noexcept {
 	std::swap(args, a.args);
 	std::swap(info, a.info);
 }
+// ----------------- ArgChecker -----------------
+ArgChecker::ArgChecker(std::ostream& ost, const std::string& shName, const std::vector<ArgItem>& args):_shName(shName), _ost(ost) {
+	int nA = args.size();
+	for(int i=0 ; i<nA ; i++) {
+		_target[i] = Detect(args[i].type);
+		_arg[i] = &args[i];
+	}
+	for(int i=nA ; i<N_TARGET ; i++) {
+		_target[i] = NONE;
+		_arg[i] = nullptr;
+	}
+}
+ArgChecker::TARGET ArgChecker::Detect(int type) {
+	if(type <= GLType_::TYPE::boolT)
+		return BOOLEAN;
+	if(type <= GLType_::TYPE::floatT)
+		return SCALAR;
+	if(type <= GLType_::TYPE::ivec4T)
+		return VECTOR;
+	return NONE;
+}
+void ArgChecker::_checkAndSet(TARGET tgt) {
+	auto t = _target[_cursor];
+	auto* arg = _arg[_cursor];
+	if(t==NONE)
+		throw GLE_InvalidArgument(_shName, "(none)");
+	if(t!=tgt)
+		throw GLE_InvalidArgument(_shName, arg->name);
+	_ost << GLType_::cs_typeStr[arg->type] << ' ' << arg->name << ';' << std::endl;
+	++_cursor;
+}
+void ArgChecker::operator()(const std::vector<float>& v) { _checkAndSet(VECTOR); }
+void ArgChecker::operator()(float v) { _checkAndSet(SCALAR); }
+void ArgChecker::operator()(bool b) { _checkAndSet(BOOLEAN); }
 
 // ----------------- GLEffect -----------------
 void GLEffect::readGLX(const std::string& fPath) {
@@ -240,56 +274,8 @@ namespace {
 
 		}
 	};
-	//! 引数の型チェックと同時に出力
-	struct ArgChecker : boost::static_visitor<> {
-		enum TARGET {
-			BOOLEAN,
-			SCALAR,
-			VECTOR,
-			NONE
-		};
-		const static int N_TARGET = 4;
-		TARGET _target[N_TARGET];
-		const ArgItem* _arg[N_TARGET];
-		const std::string& _shName;
-		std::ostream& _ost;
-		int _cursor = 0;
-
-		ArgChecker(std::ostream& ost, const std::string& shName, const std::vector<ArgItem>& args):_shName(shName), _ost(ost) {
-			int nA = args.size();
-			for(int i=0 ; i<nA ; i++) {
-				_target[i] = _Detect(args[i].type);
-				_arg[i] = &args[i];
-			}
-			for(int i=nA ; i<N_TARGET ; i++) {
-				_target[i] = NONE;
-				_arg[i] = nullptr;
-			}
-		}
-		static TARGET _Detect(int type) {
-			if(type <= GLType_::TYPE::boolT)
-				return BOOLEAN;
-			if(type <= GLType_::TYPE::floatT)
-				return SCALAR;
-			if(type <= GLType_::TYPE::ivec4T)
-				return VECTOR;
-			return NONE;
-		}
-		void _checkAndSet(TARGET tgt) {
-			auto t = _target[_cursor];
-			auto* arg = _arg[_cursor];
-			if(t==NONE)
-				throw GLE_InvalidArgument(_shName, "(none)");
-			if(t!=tgt)
-				throw GLE_InvalidArgument(_shName, arg->name);
-			_ost << GLType_::cs_typeStr[arg->type] << ' ' << arg->name << ';' << std::endl;
-			++_cursor;
-		}
-		void operator()(const std::vector<float>& v) { _checkAndSet(VECTOR); }
-		void operator()(float v) { _checkAndSet(SCALAR); }
-		void operator()(bool b) { _checkAndSet(BOOLEAN); }
-	};
 }
+
 TPStructR::TPStructR(const GLXStruct& gs, int tech, int pass) {
 	auto& tp = gs.tpL.at(tech);
 	auto& tps = tp.tpL[pass].get();

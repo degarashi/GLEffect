@@ -89,6 +89,28 @@ struct VDecl {
 	//! OpenGLへ頂点位置を設定
 	void apply(const GLuint* ids, int n) const;
 };
+//! 引数の型チェックと同時に出力
+struct ArgChecker : boost::static_visitor<> {
+	enum TARGET {
+		BOOLEAN,
+		SCALAR,
+		VECTOR,
+		NONE
+	};
+	const static int N_TARGET = 4;
+	TARGET _target[N_TARGET];
+	const ArgItem* _arg[N_TARGET];
+	const std::string& _shName;
+	std::ostream& _ost;
+	int _cursor = 0;
+
+	ArgChecker(std::ostream& ost, const std::string& shName, const std::vector<ArgItem>& args);
+	static TARGET Detect(int type);
+	void _checkAndSet(TARGET tgt);
+	void operator()(const std::vector<float>& v);
+	void operator()(float v);
+	void operator()(bool b);
+};
 //! GLXエフェクト管理クラス
 class GLEffect {
 	using UseArray = std::vector<std::string>;
