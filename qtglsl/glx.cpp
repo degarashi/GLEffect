@@ -161,12 +161,32 @@ void ArgChecker::_checkAndSet(TARGET tgt) {
 		throw GLE_InvalidArgument(_shName, "(none)");
 	if(t!=tgt)
 		throw GLE_InvalidArgument(_shName, arg->name);
-	_ost << GLType_::cs_typeStr[arg->type] << ' ' << arg->name << ';' << std::endl;
+	_ost << GLType_::cs_typeStr[arg->type] << ' ' << arg->name;
 	++_cursor;
 }
-void ArgChecker::operator()(const std::vector<float>& v) { _checkAndSet(VECTOR); }
-void ArgChecker::operator()(float v) { _checkAndSet(SCALAR); }
-void ArgChecker::operator()(bool b) { _checkAndSet(BOOLEAN); }
+void ArgChecker::operator()(const std::vector<float>& v) {
+	int typ = _arg[_cursor]->type;
+	_checkAndSet(VECTOR);
+	_ost << '=' << GLType_::cs_typeStr[typ] << '(';
+	int nV = v.size();
+	for(int i=0 ; i<nV-1 ; i++)
+		_ost << v[i] << ',';
+	_ost << v.back() << ");" << std::endl;
+}
+void ArgChecker::operator()(float v) {
+	_checkAndSet(SCALAR);
+	_ost << v << ';' << std::endl;
+}
+void ArgChecker::operator()(bool b) {
+	_checkAndSet(BOOLEAN);
+	_ost << b << ';' << std::endl;
+}
+void ArgChecker::finalizeCheck() {
+	if(_cursor >=countof(_target))
+		return;
+	if(_target[_cursor] != NONE)
+		throw GLE_InvalidArgument(_shName, "(missing arguments)");
+}
 
 // ----------------- GLEffect -----------------
 void GLEffect::readGLX(const std::string& fPath) {
@@ -312,8 +332,10 @@ TPStructR::TPStructR(const GLXStruct& gs, int tech, int pass) {
 		ArgChecker acheck(ss, shp->shName, s.args);
 		for(auto& a : shp->args)
 			boost::apply_visitor(acheck, a);
+		acheck.finalizeCheck();
+
 		// main()関数に書き換え
-		ss << "void main() {" << s.info << '}';
+		ss << "void main() {" << s.info << '}' << std::endl;
 
 		std::cout << ss.str();
 		shP[i].reset(new GLShader(c_glShFlag[i], ss.str()));

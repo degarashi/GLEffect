@@ -1,5 +1,4 @@
 #include "glx_parse.hpp"
-#include <boost/lexical_cast.hpp>
 
 namespace {
 	const static char* c_shType[] = {"VertexShader", "GeometryShader", "PixelShader"};
@@ -35,18 +34,18 @@ void ConstEntry::output(std::ostream& os) const {
 
 		void operator()(bool b) {
 			// bool, floatの時は値だけを出力
-			_dst << boost::lexical_cast<bool>(b);
+			_dst << b;
 		}
 		void operator()(float v) {
-			_dst << boost::lexical_cast<float>(v);
+			_dst << v;
 		}
 		void operator()(const std::vector<float>& v) {
 			// ベクトル値は括弧を付ける
 			int nV = v.size();
-			_dst << boost::lexical_cast<int>(nV) << '(';
+			_dst << nV << '(';
 			for(int i=0 ; i<nV-1 ; i++)
-				_dst << boost::lexical_cast<float>(v[i]) << ',';
-			_dst << boost::lexical_cast<float>(v.back()) << ')';
+				_dst << v[i] << ',';
+			_dst << v.back() << ')';
 		}
 	};
 

@@ -110,6 +110,7 @@ struct ArgChecker : boost::static_visitor<> {
 	void operator()(const std::vector<float>& v);
 	void operator()(float v);
 	void operator()(bool b);
+	void finalizeCheck();
 };
 //! GLXエフェクト管理クラス
 class GLEffect {
