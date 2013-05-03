@@ -205,6 +205,7 @@ struct ValueSetting {
 //! 変数ブロック使用宣言
 struct BlockUse {
 	unsigned					type;	// Attr,Vary,Unif,Const
+	bool						bAdd;
 	std::vector<std::string>	name;
 
 	void output(std::ostream& os) const;
@@ -311,6 +312,8 @@ struct TPStruct {
 	std::vector<boost::recursive_wrapper<TPStruct>>		tpL;
 	std::vector<ValueSetting> 	vsL;
 
+	std::vector<std::string>	derive;
+
 	void output(std::ostream& os) const;
 };
 
@@ -345,11 +348,11 @@ FUSION_ADAPT_STRUCT_AUTO(VaryStruct, (name)(derive)(entry))
 FUSION_ADAPT_STRUCT_AUTO(UnifStruct, (name)(derive)(entry))
 FUSION_ADAPT_STRUCT_AUTO(ConstStruct, (name)(derive)(entry))
 FUSION_ADAPT_STRUCT_AUTO(ShStruct, (type)(name)(args)(info))
-FUSION_ADAPT_STRUCT_AUTO(TPStruct, (name)(blkL)(bsL)(mcL)(shL)(tpL)(vsL))
+FUSION_ADAPT_STRUCT_AUTO(TPStruct, (name)(blkL)(bsL)(mcL)(shL)(tpL)(vsL)(derive))
 FUSION_ADAPT_STRUCT_AUTO(Bracket, (str)(child))
 FUSION_ADAPT_STRUCT_AUTO(GLXStruct, (atM)(csM)(shM)(tpL)(uniM)(varM))
 FUSION_ADAPT_STRUCT_AUTO(ArgItem, (type)(name))
-FUSION_ADAPT_STRUCT_AUTO(BlockUse, (type)(name))
+FUSION_ADAPT_STRUCT_AUTO(BlockUse, (type)(bAdd)(name))
 
 using Itr = std::string::const_iterator;
 //! GLX構文解析器

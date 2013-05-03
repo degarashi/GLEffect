@@ -223,77 +223,128 @@ void GLEffect::readGLX(const std::string& fPath) {
 }
 
 namespace {
-	struct TPSDupl {
-		const GLXStruct &glx;
-		const TPStruct &tTech, &tPass;
-		TPSDupl(const GLXStruct& gs, const TPStruct& tech, const TPStruct& pass): glx(gs), tTech(tech), tPass(pass) {}
+	class TPSDupl {
+		using TPList = std::vector<const TPStruct*>;
+		const GLXStruct &_glx;
+		const TPStruct &_tTech, &_tPass;
+		//! [Pass][Tech][Tech(Base0)][Tech(Base1)]...
+		TPList _tpList;
 
-		template <class T>
-		void output(std::ostream& os, const T& src, const std::string& name) const {
-			const auto& vs = src.at(name);
-			for(auto& d : vs.derive)
-				output(os, src, d);
-			for(auto& e : vs.entry) {
-				e.output(os);
-				os << std::endl;
+		void _getTPStruct(TPList& dst, const TPStruct* tp) const {
+			dst.push_back(tp);
+			auto& der = tp->derive;
+			for(auto& name : der) {
+				auto itr = std::find_if(_glx.tpL.begin(), _glx.tpL.end(), [&name](const boost::recursive_wrapper<TPStruct>& t){return t.get().name == name;});
+				_getTPStruct(dst, &(*itr));
 			}
 		}
+		public:
+			TPSDupl(const GLXStruct& gs, int tech, int pass): _glx(gs), _tTech(gs.tpL.at(tech)), _tPass(_tTech.tpL.at(pass).get()) {
+				_tpList.push_back(&_tPass);
+				// 継承関係をリストアップ
+				_getTPStruct(_tpList, &_tTech);
+			}
 
-		template <class T>
-		const BlockUse* exportBlock(std::ostream& os, const T& src, uint32_t typ) const {
-			// 一番最後に宣言されたBlockが有効。+= 演算子は今は対応しない
-			auto fn = [typ](const TPStruct& tp) -> const BlockUse* {
-				for(auto itr=tp.blkL.rbegin() ; itr!=tp.blkL.rend() ; itr++) {
-					if(itr->type == typ)
-						return &(*itr);
+			template <class ST>
+			void _extractBlocks(std::vector<const ST*>& dst, const ST* attr, const NameMap<ST> (GLXStruct::*mfunc)) const {
+				for(auto itr=attr->derive.rbegin() ; itr!=attr->derive.rend() ; itr++) {
+					auto* der = &(_glx.*mfunc).at(*itr);
+					_extractBlocks(dst, der, mfunc);
 				}
-				return nullptr;
-			};
-
-			const BlockUse* blk = fn(tPass);
-			if(!blk) {
-				// Passに無ければTechから探す
-				if(!(blk = fn(tTech)))
-					throw GLE_LogicalError(
-						(boost::format("no %1% block found in %2% : %3%") % GLBlocktype_::cs_typeStr[typ] % tTech.name % tPass.name).str());
+				if(std::find(dst.begin(), dst.end(), attr) == dst.end())
+					dst.push_back(attr);
 			}
 
-			for(auto& a : blk->name)
-				output(os, src, a);
-			return blk;
-		}
-		void exportVarying(std::ostream& os) const {
-			exportBlock(os, glx.varM, GLBlocktype_::TYPE::varyingT);
-		}
-		const BlockUse* exportAttribute(std::ostream& os) const {
-			return exportBlock(os, glx.atM, GLBlocktype_::TYPE::attributeT);
-		}
-		void exportConst(std::ostream& os) const {
-			// constブロックは必須ではない
-			try {
-				exportBlock(os, glx.csM, GLBlocktype_::TYPE::constT);
-			} catch(const GLE_LogicalError& e) {}
-		}
-		void exportUniform(std::ostream& os) const {
-			// uniformブロックは必須ではない
-			try {
-				exportBlock(os, glx.uniM, GLBlocktype_::TYPE::uniformT);
-			} catch(const GLE_LogicalError& e) {}
-		}
-		void exportMacro(std::ostream& os) const {
-			// MacroListを合成 (pass + tech)
-			for(auto& a : tPass.mcL)
-				a.output(os);
-			for(auto& a : tTech.mcL) {
-				auto itr = std::find_if(tPass.mcL.begin(), tPass.mcL.end(), [&a](const MacroEntry& e) { return a.fromStr==e.fromStr; });
-				if(itr == tPass.mcL.end())
-					a.output(os);
+			template <class ST, class ENT>
+			std::vector<const ENT*> exportEntries(int blockID, const std::map<std::string,ST> (GLXStruct::*mfunc)) const {
+				// 使用されるAttributeブロックを収集
+				std::vector<const ST*> tmp, tmp2;
+				// 配列末尾から処理をする
+				for(auto itr=_tpList.rbegin() ; itr!=_tpList.rend() ; itr++) {
+					const TPStruct* tp = (*itr);
+					// ブロックは順方向で操作 = 後に書いたほうが優先
+					for(auto& blk : tp->blkL) {
+						if(blk.type == blockID) {
+							if(!blk.bAdd)
+								tmp.clear();
+							for(auto& name : blk.name)
+								tmp.push_back(&(_glx.*mfunc).at(name));
+						}
+					}
+				}
+				// ブロック継承展開
+				for(auto& p : tmp) {
+					// 既に同じブロックが登録されていたら何もしない(エントリの重複を省く)
+					_extractBlocks(tmp2, p, mfunc);
+				}
+				// エントリ抽出: 同じ名前のエントリがあればエラー = 異なるエントリに同じ変数が存在している
+				std::vector<const ENT*> ret;
+				for(auto& p : tmp2) {
+					for(auto& e : p->entry) {
+						if(std::find_if(ret.begin(), ret.end(), [&e](const ENT* tmp){return e.name==tmp->name;}) != ret.end())
+							throw GLE_LogicalError((boost::format("duplication of entry \"%1%\"") % e.name).str());
+						ret.push_back(&e);
+					}
+				}
+				return ret;
 			}
-		}
-		void exportVSemantics(std::string (&dst)[static_cast<int>(VSem::NUM_SEMANTIC)], const BlockUse* blk) {
+			using MacroPair = std::pair<std::string, std::string>;
+			using MacroMap = std::map<std::string, std::string>;
+			MacroMap exportMacro() const {
+				MacroMap mm;
+				for(auto itr=_tpList.rbegin() ; itr!=_tpList.rend() ; itr++) {
+					for(auto& mc : (*itr)->mcL) {
+						MacroPair mp(mc.fromStr, mc.toStr ? (*mc.toStr) : std::string());
+						mm.insert(std::move(mp));
+					}
+				}
+				return std::move(mm);
+			}
+			SettingList exportSetting() const {
+				std::vector<ValueSettingR> vsL;
+				std::vector<BoolSettingR> bsL;
+				for(auto itr=_tpList.rbegin() ; itr!=_tpList.rend() ; itr++) {
+					const TPStruct* tp = (*itr);
+					// フラグ設定エントリ
+					for(auto& bs : tp->bsL) {
+						// 実行時形式に変換してからリストに追加
+						BoolSettingR bsr(bs);
+						auto itr=std::find(bsL.begin(), bsL.end(), bsr);
+						if(itr == bsL.end()) {
+							// 新規に追加
+							bsL.push_back(bsr);
+						} else {
+							// 既存の項目を上書き
+							*itr = bsr;
+						}
+					}
 
-		}
+					// 値設定エントリ
+					for(auto& vs : tp->vsL) {
+						ValueSettingR vsr(vs);
+						auto itr=std::find(vsL.begin(), vsL.end(), vsr);
+						if(itr == vsL.end())
+							vsL.push_back(vsr);
+						else
+							*itr = vsr;
+					}
+				}
+				SettingList ret;
+				for(auto& b : bsL)
+					ret.push_back(b);
+				for(auto& v : vsL)
+					ret.push_back(v);
+				return std::move(ret);
+			}
 	};
+
+	template <class DST, class SRC>
+	void OutputS(DST& dst, const SRC& src) {
+		for(auto& p : src) {
+			p->output(dst);
+			dst << std::endl;
+		}
+	}
 }
 
 TPStructR::TPStructR(const GLXStruct& gs, int tech, int pass) {
@@ -311,7 +362,7 @@ TPStructR::TPStructR(const GLXStruct& gs, int tech, int pass) {
 		throw GLE_LogicalError("no vertex or pixel shader found");
 
 	std::stringstream ss;
-	TPSDupl dupl(gs, tp, tps);
+	TPSDupl dupl(gs, tech, pass);
 	SPShader shP[ShType::NUM_SHTYPE];
 	const BlockUse* blk;
 	for(int i=0 ; i<countof(selectSh) ; i++) {
@@ -319,12 +370,31 @@ TPStructR::TPStructR(const GLXStruct& gs, int tech, int pass) {
 		if(!shp)
 			continue;
 
-		dupl.exportMacro(ss);
-		if(i==ShType::VERTEX)
-			blk = dupl.exportAttribute(ss);
-		dupl.exportVarying(ss);
-		dupl.exportConst(ss);
-		dupl.exportUniform(ss);
+		{
+			auto macro = dupl.exportMacro();
+			for(auto& p : macro)
+				ss << "#define " << p.first << ' ' << p.second << std::endl;
+		}
+		if(i==ShType::VERTEX) {
+			auto attL = dupl.exportEntries<AttrStruct,AttrEntry>(GLBlocktype_::attributeT, &GLXStruct::atM);
+			for(auto& p : attL) {
+				p->output(ss);
+				ss << std::endl;
+
+				// 頂点セマンティクス対応リストを生成
+				// セマンティクスの重複はエラー
+				auto& semStr = _vsem[p->sem];
+				if(!semStr.empty())
+					throw GLE_LogicalError((boost::format("duplication of vertex semantics \"%1% : %2%\"") % p->name % GLSem_::cs_typeStr[p->sem]).str());
+				semStr = p->name;
+			}
+		}
+		{	auto varL = dupl.exportEntries<VaryStruct,VaryEntry>(GLBlocktype_::varyingT, &GLXStruct::varM);
+			OutputS(ss, varL); }
+		{	auto csL = dupl.exportEntries<ConstStruct,ConstEntry>(GLBlocktype_::constT, &GLXStruct::csM);
+			OutputS(ss, csL); }
+		{	auto unifL = dupl.exportEntries<UnifStruct,UnifEntry>(GLBlocktype_::uniformT, &GLXStruct::uniM);
+			OutputS(ss, unifL); }
 
 		const ShStruct& s = gs.shM.at(shp->shName);
 		// シェーダー引数の型チェック
@@ -338,9 +408,16 @@ TPStructR::TPStructR(const GLXStruct& gs, int tech, int pass) {
 		ss << "void main() {" << s.info << '}' << std::endl;
 
 		std::cout << ss.str();
+		std::cout.flush();
 		shP[i].reset(new GLShader(c_glShFlag[i], ss.str()));
 
 		ss.str("");
 		ss.clear();
 	}
+	// シェーダーのリンク処理
+	_prog.reset(new GLProgram(shP[0], shP[1], shP[2]));
+
+	// OpenGLステート設定リストを形成
+	SettingList sl = dupl.exportSetting();
+	_setting.swap(sl);
 }

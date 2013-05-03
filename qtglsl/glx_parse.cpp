@@ -28,7 +28,7 @@ GR_Glx::GR_Glx(): GR_Glx::base_type(rlGLX, "OpenGL_effect_parser") {
 	rlBoolSet %= qi::no_case[GLBoolsetting] > '=' > qi::no_case[qi::bool_] > ';';
 	rlValueSet %= qi::no_case[GLSetting] > '=' >
 			qi::repeat(1,4)[qi::no_case[GLColormask] | qi::uint_ | qi::float_ | qi::bool_] > ';';
-	rlBlockUse %= qi::no_case[GLBlocktype] > '=' > (rlNameToken % ',') > ';';
+	rlBlockUse = qi::no_case[GLBlocktype][at_c<0>(_val)=_1] > (lit('=')[at_c<1>(_val)=val(false)] | lit("+=")[at_c<1>(_val)=val(true)]) > (rlNameToken % ',')[at_c<2>(_val)=_1] > ';';
 	rlShSet = qi::no_case[GLShadertype][at_c<0>(_val)=_1] > '=' > rlNameToken[at_c<1>(_val)=_1] > lit('(') >
 		(-(rlVec|qi::bool_|qi::float_)[push_back(at_c<2>(_val), _1)] > *(lit(',') > (rlVec|qi::bool_|qi::float_)[push_back(at_c<2>(_val), _1)])) >
 		lit(");");
@@ -50,7 +50,7 @@ GR_Glx::GR_Glx(): GR_Glx::base_type(rlGLX, "OpenGL_effect_parser") {
 			*(rlBlockUse[push_back(at_c<1>(_val),_1)] | rlBoolSet[push_back(at_c<2>(_val),_1)] |
 			rlMacroBlock[at_c<3>(_val)=_1] | rlShSet[push_back(at_c<4>(_val), _1)] |
 			rlValueSet[push_back(at_c<6>(_val),_1)]) > '}';
-	rlTechBlock = lit("technique") > rlNameToken[at_c<0>(_val)=_1] > '{' >
+	rlTechBlock = lit("technique") > rlNameToken[at_c<0>(_val)=_1] > -(':' > (rlNameToken % ',')[at_c<7>(_val)=_1]) > '{' >
 			*(rlPassBlock[push_back(at_c<5>(_val),_1)] | rlBlockUse[push_back(at_c<1>(_val),_1)] | rlBoolSet[push_back(at_c<2>(_val),_1)] |
 			rlMacroBlock[at_c<3>(_val)=_1] | rlShSet[push_back(at_c<4>(_val), _1)] |
 			rlValueSet[push_back(at_c<6>(_val),_1)]) > '}';
