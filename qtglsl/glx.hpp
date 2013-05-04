@@ -57,8 +57,6 @@ class TPStructR {
 	//! Setting: Uniformデフォルト値(texture, vector, float, bool)設定を含む。GLDeviceの設定クラスリスト
 	SettingList		_setting;
 
-	void _initialize(GLXStruct& gs);
-
 	public:
 		TPStructR();
 		TPStructR(TPStructR&& tp);
@@ -67,7 +65,11 @@ class TPStructR {
 		bool findSetting(const Setting& s) const;
 		void swap(TPStructR& tp) noexcept;
 
-		// 設定差分を求める
+		//! OpenGLに設定を適用
+		void applySetting() const;
+		//! 頂点ポインタを設定
+		void setVertex(int stID) const;
+		//! 設定差分を求める
 		static TPStructR calcDiff(const TPStructR& from, const TPStructR& to);
 };
 //! 頂点宣言

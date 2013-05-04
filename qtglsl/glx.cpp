@@ -420,4 +420,20 @@ TPStructR::TPStructR(const GLXStruct& gs, int tech, int pass) {
 	// OpenGLステート設定リストを形成
 	SettingList sl = dupl.exportSetting();
 	_setting.swap(sl);
+
+	applySetting();
+}
+
+void TPStructR::applySetting() const {
+	struct Visitor : boost::static_visitor<> {
+		void operator()(const BoolSettingR& bs) const {
+			bs.action();
+		}
+		void operator()(const ValueSettingR& vs) const {
+			vs.action();
+		}
+		void operator()(const DefVal& v) const {}
+	};
+	for(auto& st : _setting)
+		boost::apply_visitor(Visitor(), st);
 }
