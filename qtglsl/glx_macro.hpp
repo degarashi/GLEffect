@@ -7,13 +7,14 @@
 #define SEQ_PRECISION (highp)(mediump)(lowp)
 #define SEQ_INOUT (in)(out)(inout)
 #define SEQ_BLOCK (attribute)(varying)(uniform)(const)
-#define SEQ_GLSETTING ((linewidth,glLineWidth,float))((frontface,glFrontFace,int))((cullface,glCullFace,int))((depthrange,glDepthRange,float,float))((viewport,glViewport,int,int,int,int))\
-		((scissor,glScissor,int,int,int,int))((samplecoverage,glSampleCoverage,float,bool))((stencilfunc,glStencilFunc,int,int,int))((stencilfuncfront,StencilFuncFront,int,int,int))\
-		((stencilfuncback,StencilFuncBack,int,int,int))((stencilop,glStencilOp,int,int,int))((stencilopfront,StencilOpFront,int,int,int))((stencilopback,StencilOpBack,int,int,int))\
-		((depthfunc,glDepthFunc,int))((blendeq,glBlendEquation,int))((blendeqca,glBlendEquationSeparate,int,int))((blendfunc,glBlendFunc,int,int))\
-		((blendfuncca,glBlendFuncSeparate,int,int,int,int))((blendcolor,glBlendColor,float,float,float,float))\
+// 本当はint引数な所をfloatで統一
+#define SEQ_GLSETTING ((linewidth,glLineWidth,float))((frontface,glFrontFace,float))((cullface,glCullFace,float))((depthrange,glDepthRange,float,float))((viewport,glViewport,float,float,float,float))\
+		((scissor,glScissor,float,float,float,float))((samplecoverage,glSampleCoverage,float,bool))((stencilfunc,glStencilFunc,float,float,float))((stencilfuncfront,StencilFuncFront,float,float,float))\
+		((stencilfuncback,StencilFuncBack,float,float,float))((stencilop,glStencilOp,float,float,float))((stencilopfront,StencilOpFront,float,float,float))((stencilopback,StencilOpBack,float,float,float))\
+		((depthfunc,glDepthFunc,float))((blendeq,glBlendEquation,float))((blendeqca,glBlendEquationSeparate,float,float))((blendfunc,glBlendFunc,float,float))\
+		((blendfuncca,glBlendFuncSeparate,float,float,float,float))((blendcolor,glBlendColor,float,float,float,float))\
 		((colormask,glColorMask,bool,bool,bool,bool))((depthmask,glDepthMask,bool))\
-		((stencilmask,glStencilMask,int))((stencilmaskfront,StencilMaskFront,int))((stencilmaskback,StencilMaskBack,int))
+		((stencilmask,glStencilMask,float))((stencilmaskfront,StencilMaskFront,float))((stencilmaskback,StencilMaskBack,float))
 
 #define NUM_TEXCOORD 8
 #define PPFUNC_ADDNUM(z,n,data) (BOOST_PP_CAT(data,n))
