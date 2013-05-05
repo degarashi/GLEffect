@@ -3,7 +3,9 @@
 #include <stdexcept>
 #include <string>
 #include <memory>
+#include <vector>
 #include "glhead.hpp"
+#define countof(elem) static_cast<int>(sizeof((elem))/sizeof((elem)[0]))
 
 //! Tech:Pass の組み合わせを表す
 struct GL16ID {
@@ -103,6 +105,40 @@ class GLShader : public IGLResource {
 		void onDeviceReset() override;
 };
 using SPShader = std::shared_ptr<GLShader>;
+
+using ByteBuff = std::vector<uint8_t>;
+//! OpenGLバッファクラス
+class GLBuffer : public IGLResource {
+	GLuint	_buffType,			//!< VERTEX_BUFFERなど
+			_drawType,			//!< STATIC_DRAWなどのフラグ
+			_unitFlag,			//!< 要素フラグ(OpenGL)
+			_unitSize,			//!< 1要素のバイトサイズ
+			_stride,			//!< 頂点1個の要素数
+			_idBuff;			//!< OpenGLバッファID
+	ByteBuff	_buff;
+
+	const static GLuint cs_cnv[];
+
+	void _initBuffer();
+
+	GLBuffer(GLuint flag, GLuint dtype, GLuint unitFlag, GLuint stride);
+	public:
+		GLBuffer(GLuint flag, GLuint dtype, GLuint unitFlag, GLuint stride, const ByteBuff& buff);
+		GLBuffer(GLuint flag, GLuint dtype, GLuint unitFlag, GLuint stride, ByteBuff&& buff);
+		~GLBuffer() override;
+		void onDeviceLost() override;
+		void onDeviceReset() override;
+
+		GLuint getBuffID() const;
+		GLuint getUnitSize() const;
+		GLuint getBuffType() const;
+		GLuint getStride() const;
+		GLuint getUnitFlag() const;
+		static GLuint GetUnitSize(GLuint flag);
+
+		void use() const;
+};
+using SPBuffer = std::shared_ptr<GLBuffer>;
 
 //! OpenGLエラーIDとその詳細メッセージ
 struct ErrID {
