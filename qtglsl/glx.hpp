@@ -1,5 +1,6 @@
 #pragma once
 
+#include <functional>
 #include <unordered_map>
 #include <boost/lexical_cast.hpp>
 #include "glresource.hpp"
@@ -45,6 +46,49 @@ struct BoolSettingR {
 	bool operator == (const BoolSettingR& s) const;
 };
 
+struct VData {
+	const static int MAX_STREAM = 4;
+	using SPBuffA = SPBuffer[MAX_STREAM];
+	using AttrA = GLint[static_cast<int>(VSem::NUM_SEMANTIC)];
+
+	const SPBuffA&	spBuff;
+	const AttrA&	attrID;
+
+	VData(const SPBuffA& b, const AttrA& at): spBuff(b), attrID(at) {}
+};
+//! 頂点宣言
+struct VDecl {
+	class VDArray {
+		using FUNC = std::function<void (const VData&)>;
+		FUNC _func;
+
+		public:
+			VDArray() {}
+			VDArray(const VDArray& v) = default;
+			VDArray& operator = (const VDArray& v) {
+				_func = v._func;
+				return *this;
+			}
+			/*! \param[in] streamID		(便宜上の)ストリームID
+				\param[in] elemFlag		OpenGLの要素フラグ
+				\param[in] bNormalize	OpenGLが正規化するか(bool)
+				\param[in] offset		バイトオフセット
+				\param[in] semID		頂点セマンティクスID */
+			VDArray(GLuint streamID, GLuint elemFlag, GLuint bNormalize, GLuint offset, GLuint semID);
+			void apply(const VData& vdata) const {
+				_func(vdata);
+			}
+	};
+	using VDArrayL = std::vector<VDArray>;
+	VDArrayL	_ar;
+
+	VDecl();
+	// {streamID, offset, GLFlag, bNoramalize, semantics}
+	VDecl(std::initializer_list<VDArray> il);
+	//! OpenGLへ頂点位置を設定
+	void apply(const VData& vdata) const;
+};
+
 using DefVal = std::pair<std::string, boost::variant<GLTexture, vec4, float, bool>>;
 using Setting = boost::variant<DefVal, BoolSettingR, ValueSettingR>;
 using SettingList = std::vector<Setting>;
@@ -52,8 +96,9 @@ using SettingList = std::vector<Setting>;
 class TPStructR {
 	SPProg			_prog;
 	// --- 関連情報(ゼロから構築する場合の設定項目) ---
-	//! Attribute: 頂点セマンティクスに対する変数名
-	std::string		_vsem[static_cast<int>(VSem::NUM_SEMANTIC)];
+	//! Attribute: 頂点セマンティクスに対する頂点ID
+	/*! 無効なセマンティクスは負数 */
+	GLint			_vAttrID[static_cast<int>(VSem::NUM_SEMANTIC)];
 	//! Setting: Uniformデフォルト値(texture, vector, float, bool)設定を含む。GLDeviceの設定クラスリスト
 	SettingList		_setting;
 
@@ -67,29 +112,10 @@ class TPStructR {
 
 		//! OpenGLに設定を適用
 		void applySetting() const;
-		//! 頂点ポインタを設定
-		void setVertex(int stID) const;
+		//! 頂点ポインタを設定 (GLXから呼ぶ)
+		void setVertex(const VDecl& vdecl, const SPBuffer (&stream)[VData::MAX_STREAM]) const;
 		//! 設定差分を求める
 		static TPStructR calcDiff(const TPStructR& from, const TPStructR& to);
-};
-//! 頂点宣言
-struct VDecl {
-	struct VDArray {
-		int		streamID,	//!< (便宜上の)ストリームID
-				offset,		//!< バイトオフセット
-				bNormalize,	//!< OpenGLが正規化するか(bool)
-				elemSize,	//!< バイトサイズ
-				semID;		//!< 頂点情報タグ
-
-		VDArray() {}
-		VDArray(int st, int of, int bn, int el, int se): streamID(st), offset(of), bNormalize(bn), elemSize(el), semID(se) {}
-	};
-	std::vector<VDArray>	_ar;
-
-	VDecl();
-	VDecl(std::initializer_list<VDArray> il);
-	//! OpenGLへ頂点位置を設定
-	void apply(const GLuint* ids, int n) const;
 };
 //! 引数の型チェックと同時に出力
 struct ArgChecker : boost::static_visitor<> {
@@ -126,6 +152,7 @@ class GLEffect {
 	TechMap		_techMap;		//!< ゼロから設定を構築する場合の情報や頂点セマンティクス
 	DiffCache	_diffCache;		//!< セッティング差分を格納
 	VDecl		_vDecl;			//!< 現在アクティブな頂点定義
+	SPBuffer	_vBuffer[VData::MAX_STREAM];
 
 	public:
 		//! GLEffectで発生する例外基底

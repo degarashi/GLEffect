@@ -88,12 +88,28 @@ bool BoolSettingR::operator == (const BoolSettingR& s) const {
 GLEffect::EC_FileNotFound::EC_FileNotFound(const std::string& fPath):
 	EC_Base((boost::format("file path: \"%1%\" was not found.") % fPath).str()) {}
 // ----------------- VDecl -----------------
+VDecl::VDArray::VDArray(GLuint streamID, GLuint elemFlag, GLuint bNormalize, GLuint offset, GLuint semID):
+	_func([=](const VData& vdata){
+		if(vdata.attrID[semID] < 0)
+			return;
+
+		auto& spl = vdata.spBuff[streamID];
+		glBindBuffer(GL_ARRAY_BUFFER, spl->getBuffID());
+		glVertexAttribPointer(vdata.attrID[semID], GLBuffer::GetUnitSize(elemFlag), elemFlag, bNormalize, spl->getStride(), (const GLvoid*)offset);
+		GLDevice::checkError("VDArray::apply()");
+	}) {}
+
 VDecl::VDecl() {}
 VDecl::VDecl(std::initializer_list<VDArray> il) {
 	_ar.resize(il.size());
 	std::copy(il.begin(), il.end(), _ar.begin());
 }
-void VDecl::apply(const GLuint* ids, int n) const {}
+void VDecl::apply(const VData& vdata) const {
+	// 単に配列を巡回するだけ
+	for(auto& va : _ar)
+		va.apply(vdata);
+}
+
 // ----------------- TPStructR -----------------
 TPStructR::TPStructR() {}
 TPStructR::TPStructR(TPStructR&& tp) {
@@ -101,7 +117,7 @@ TPStructR::TPStructR(TPStructR&& tp) {
 }
 void TPStructR::swap(TPStructR& t) noexcept {
 	boost::swap(_prog, t._prog);
-	boost::swap(_vsem, t._vsem);
+	boost::swap(_vAttrID, t._vAttrID);
 	boost::swap(_setting, t._setting);
 }
 bool TPStructR::findSetting(const Setting& s) const {
@@ -117,7 +133,7 @@ TPStructR TPStructR::calcDiff(const TPStructR& from, const TPStructR& to) {
 			ret._setting.push_back(s);
 		}
 	}
-	std::copy(to._vsem, to._vsem+countof(_vsem), ret._vsem);
+	std::copy(to._vAttrID, to._vAttrID+countof(_vAttrID), ret._vAttrID);
 	return std::move(ret);
 }
 
@@ -364,7 +380,7 @@ TPStructR::TPStructR(const GLXStruct& gs, int tech, int pass) {
 	std::stringstream ss;
 	TPSDupl dupl(gs, tech, pass);
 	SPShader shP[ShType::NUM_SHTYPE];
-	const BlockUse* blk;
+	std::vector<const AttrEntry*> attL;
 	for(int i=0 ; i<countof(selectSh) ; i++) {
 		auto* shp = selectSh[i];
 		if(!shp)
@@ -376,17 +392,11 @@ TPStructR::TPStructR(const GLXStruct& gs, int tech, int pass) {
 				ss << "#define " << p.first << ' ' << p.second << std::endl;
 		}
 		if(i==ShType::VERTEX) {
-			auto attL = dupl.exportEntries<AttrStruct,AttrEntry>(GLBlocktype_::attributeT, &GLXStruct::atM);
+			// attL: 後で頂点関連付けにも使う
+			attL = dupl.exportEntries<AttrStruct,AttrEntry>(GLBlocktype_::attributeT, &GLXStruct::atM);
 			for(auto& p : attL) {
 				p->output(ss);
 				ss << std::endl;
-
-				// 頂点セマンティクス対応リストを生成
-				// セマンティクスの重複はエラー
-				auto& semStr = _vsem[p->sem];
-				if(!semStr.empty())
-					throw GLE_LogicalError((boost::format("duplication of vertex semantics \"%1% : %2%\"") % p->name % GLSem_::cs_typeStr[p->sem]).str());
-				semStr = p->name;
 			}
 		}
 		{	auto varL = dupl.exportEntries<VaryStruct,VaryEntry>(GLBlocktype_::varyingT, &GLXStruct::varM);
@@ -416,6 +426,19 @@ TPStructR::TPStructR(const GLXStruct& gs, int tech, int pass) {
 	}
 	// シェーダーのリンク処理
 	_prog.reset(new GLProgram(shP[0], shP[1], shP[2]));
+	// 頂点AttribIDを無効な値で初期化
+	for(auto& v : _vAttrID)
+		v = -2;	// 初期値=-2, クエリの無効値=-1
+	for(auto& p : attL) {
+		// 頂点セマンティクス対応リストを生成
+		// セマンティクスの重複はエラー
+		auto& atID = _vAttrID[p->sem];
+		if(atID != -2)
+			throw GLE_LogicalError((boost::format("duplication of vertex semantics \"%1% : %2%\"") % p->name % GLSem_::cs_typeStr[p->sem]).str());
+		atID = glGetAttribLocation(_prog->getProgramID(), p->name.c_str());
+		GLDevice::checkError("GetAttribLocation()");
+		// -1の場合は警告を出す(もしかしたらシェーダー内で使ってないだけかもしれない)
+	}
 
 	// OpenGLステート設定リストを形成
 	SettingList sl = dupl.exportSetting();
@@ -436,4 +459,9 @@ void TPStructR::applySetting() const {
 	};
 	for(auto& st : _setting)
 		boost::apply_visitor(Visitor(), st);
+}
+
+void TPStructR::setVertex(const VDecl &vdecl, const SPBuffer (&stream)[VData::MAX_STREAM]) const {
+	_prog->use();
+	vdecl.apply(VData(stream, _vAttrID));
 }
