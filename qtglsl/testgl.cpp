@@ -10,7 +10,11 @@ void TestGLX() {
 // 	gle.applySetting();
 // 	gle.setPass("AnotherPass");
 // 	gle.applySetting();
-// 	gle.setVDecl({0, 0, 4, VSem.POSITION});
+	SPVDecl decl(new VDecl{
+		{0,0, GL_FLOAT, GL_FALSE, 3, (GLuint)VSem::POSITION},
+		{0,12, GL_FLOAT, GL_FALSE, 4, (GLuint)VSem::TEXCOORD0}
+	});
+	gle.setVDecl(decl);
 // 	gle.setUniform(vec4(1,2,3,4), "the_param");
 // 	gle.setMacro("the_entry", 128);
 

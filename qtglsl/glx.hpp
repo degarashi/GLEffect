@@ -57,37 +57,30 @@ struct VData {
 	VData(const SPBuffA& b, const AttrA& at): spBuff(b), attrID(at) {}
 };
 //! 頂点宣言
-struct VDecl {
-	class VDArray {
-		using FUNC = std::function<void (const VData&)>;
-		FUNC _func;
+class VDecl {
+	public:
+		struct VDInfo {
+			GLuint	streamID,		//!< 便宜上の)ストリームID
+					offset,			//!< バイトオフセット
+					elemFlag,		//!< OpenGLの要素フラグ
+					bNormalize,		//!< OpenGLが正規化するか(bool)
+					elemSize,		//!< 要素数
+					semID;			//!< 頂点セマンティクスID
+		};
+	private:
+		using Func = std::function<void (GLuint, const VData::AttrA&)>;
+		using FuncL = std::vector<Func>;
+		FuncL	_func;						//!< ストリーム毎のサイズを1次元配列で格納 = 0番から並べる
+		int		_nEnt[VData::MAX_STREAM+1];	//!< 各ストリームの先頭インデックス
 
-		public:
-			VDArray() {}
-			VDArray(const VDArray& v) = default;
-			VDArray& operator = (const VDArray& v) {
-				_func = v._func;
-				return *this;
-			}
-			/*! \param[in] streamID		(便宜上の)ストリームID
-				\param[in] elemFlag		OpenGLの要素フラグ
-				\param[in] bNormalize	OpenGLが正規化するか(bool)
-				\param[in] offset		バイトオフセット
-				\param[in] semID		頂点セマンティクスID */
-			VDArray(GLuint streamID, GLuint elemFlag, GLuint bNormalize, GLuint offset, GLuint semID);
-			void apply(const VData& vdata) const {
-				_func(vdata);
-			}
-	};
-	using VDArrayL = std::vector<VDArray>;
-	VDArrayL	_ar;
-
-	VDecl();
-	// {streamID, offset, GLFlag, bNoramalize, semantics}
-	VDecl(std::initializer_list<VDArray> il);
-	//! OpenGLへ頂点位置を設定
-	void apply(const VData& vdata) const;
+	public:
+		VDecl();
+		//! 入力: {streamID, offset, GLFlag, bNoramalize, semantics}
+		VDecl(std::initializer_list<VDInfo> il);
+		//! OpenGLへ頂点位置を設定
+		void apply(const VData& vdata) const;
 };
+using SPVDecl = std::shared_ptr<VDecl>;
 
 using DefVal = std::pair<std::string, boost::variant<GLTexture, vec4, float, bool>>;
 using Setting = boost::variant<DefVal, BoolSettingR, ValueSettingR>;
@@ -149,10 +142,11 @@ class GLEffect {
 	using TechMap = std::unordered_map<GL16ID, TPStructR>;
 	using DiffCache = std::unordered_map<GLDiffID, int>;
 
-	TechMap		_techMap;		//!< ゼロから設定を構築する場合の情報や頂点セマンティクス
-	DiffCache	_diffCache;		//!< セッティング差分を格納
-	VDecl		_vDecl;			//!< 現在アクティブな頂点定義
-	SPBuffer	_vBuffer[VData::MAX_STREAM];
+	TechMap			_techMap;		//!< ゼロから設定を構築する場合の情報や頂点セマンティクス
+	DiffCache		_diffCache;		//!< セッティング差分を格納
+	SPVDecl			_spVDecl;		//!< 現在アクティブな頂点定義
+	SPBuffer		_vBuffer[VData::MAX_STREAM],
+					_iBuffer;
 
 	public:
 		//! GLEffectで発生する例外基底
@@ -194,12 +188,15 @@ class GLEffect {
 		void applySetting();
 
 		//! 頂点宣言
-		void setVDecl(const VDecl* pDecl);
+		/*! \param[in] decl 頂点定義クラスのポインタ(定数を前提) */
+		void setVDecl(const SPVDecl& decl);
+		void setVStream(const SPBuffer& sp);
+		void setIStream(const SPBuffer& sp);
 		//! Tech指定
 		void setTechnique(const std::string& tech);
 		//! Pass指定
 		void setPass(int n);
-		void setPass(const std::string& );
+		void setPass(const std::string& pass);
 		//! マクロ変数指定 (float, vector, string)
 		template <class T>
 		void setMacro(const std::string& entry, const T& value) {

@@ -88,26 +88,56 @@ bool BoolSettingR::operator == (const BoolSettingR& s) const {
 GLEffect::EC_FileNotFound::EC_FileNotFound(const std::string& fPath):
 	EC_Base((boost::format("file path: \"%1%\" was not found.") % fPath).str()) {}
 // ----------------- VDecl -----------------
-VDecl::VDArray::VDArray(GLuint streamID, GLuint elemFlag, GLuint bNormalize, GLuint offset, GLuint semID):
-	_func([=](const VData& vdata){
-		if(vdata.attrID[semID] < 0)
-			return;
-
-		auto& spl = vdata.spBuff[streamID];
-		glBindBuffer(GL_ARRAY_BUFFER, spl->getBuffID());
-		glVertexAttribPointer(vdata.attrID[semID], GLBuffer::GetUnitSize(elemFlag), elemFlag, bNormalize, spl->getStride(), (const GLvoid*)offset);
-		GLDevice::checkError("VDArray::apply()");
-	}) {}
-
 VDecl::VDecl() {}
-VDecl::VDecl(std::initializer_list<VDArray> il) {
-	_ar.resize(il.size());
-	std::copy(il.begin(), il.end(), _ar.begin());
+VDecl::VDecl(std::initializer_list<VDInfo> il) {
+	// StreamID毎に集計
+	std::vector<VDInfo> tmp[VData::MAX_STREAM];
+	for(auto& v : il)
+		tmp[v.streamID].push_back(v);
+
+	// 頂点定義のダブり確認
+	for(auto& t : tmp) {
+		// オフセットでソート
+		std::sort(t.begin(), t.end(), [](const VDInfo& v0, const VDInfo& v1) { return v0.offset < v1.offset; });
+
+		uint ofs = 0;
+		for(auto& t2 : t) {
+			if(ofs > t2.offset)
+				throw GLE_Error("invalid vertex offset");
+			ofs += GLBuffer::GetUnitSize(t2.elemFlag) * t2.elemSize;
+		}
+	}
+
+	_func.resize(il.size());
+	int cur = 0;
+	for(int i=0 ; i<countof(tmp) ; i++) {
+		_nEnt[i] = cur;
+		for(auto& t2 : tmp[i]) {
+			_func[cur] = [&t2](GLuint stride, const VData::AttrA& attr) {
+				auto attrID = attr[t2.semID];
+				if(attrID < 0)
+					return;
+
+				glVertexAttribPointer(attrID, t2.elemSize, t2.elemFlag, t2.bNormalize, stride, (const GLvoid*)t2.offset);
+				GLDevice::checkError("VDArray::apply()");
+			};
+		}
+
+		++cur;
+	}
+	_nEnt[VData::MAX_STREAM] = _nEnt[VData::MAX_STREAM-1];
 }
 void VDecl::apply(const VData& vdata) const {
-	// 単に配列を巡回するだけ
-	for(auto& va : _ar)
-		va.apply(vdata);
+	for(int i=0 ; i<VData::MAX_STREAM ; i++) {
+		auto& sp = vdata.spBuff[i];
+		glBindBuffer(GL_ARRAY_BUFFER, sp->getBuffID());
+		GLDevice::checkError("VDecl::apply()");
+
+		GLuint stride = sp->getStride();
+		for(int j=_nEnt[i] ; j<_nEnt[i+1] ; j++)
+			_func[j](stride, vdata.attrID);
+	}
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
 
 // ----------------- TPStructR -----------------
@@ -236,6 +266,9 @@ void GLEffect::readGLX(const std::string& fPath) {
 		for(int passID=0 ; passID<nJ ; passID++)
 			_techMap.insert(std::make_pair(GL16ID(techID, passID), TPStructR(result, techID, passID)));
 	}
+}
+void GLEffect::setVDecl(const SPVDecl& decl) {
+	_spVDecl = decl;
 }
 
 namespace {
