@@ -111,31 +111,33 @@ using SPShader = std::shared_ptr<GLShader>;
 using ByteBuff = std::vector<uint8_t>;
 //! OpenGLバッファクラス
 class GLBuffer : public IGLResource {
-	GLuint	_buffType,			//!< VERTEX_BUFFERなど
-			_drawType,			//!< STATIC_DRAWなどのフラグ
-			_unitFlag,			//!< 要素フラグ(OpenGL)
-			_unitSize,			//!< 1要素のバイトサイズ
-			_stride,			//!< 頂点1個の要素数
-			_idBuff;			//!< OpenGLバッファID
-	ByteBuff	_buff;
+	GLuint		_buffType,			//!< VERTEX_BUFFERなど
+				_drawType,			//!< STATIC_DRAWなどのフラグ
+				_stride,			//!< 頂点1つのバイトサイズ
+				_idBuff;			//!< OpenGLバッファID
+	ByteBuff	_buff;				//!< 再構築の際に必要となるデータ実体
 
 	const static GLuint cs_cnv[];
 
 	void _initBuffer();
 
-	GLBuffer(GLuint flag, GLuint dtype, GLuint unitFlag, GLuint stride);
 	public:
-		GLBuffer(GLuint flag, GLuint dtype, GLuint unitFlag, GLuint stride, const ByteBuff& buff);
-		GLBuffer(GLuint flag, GLuint dtype, GLuint unitFlag, GLuint stride, ByteBuff&& buff);
+		//! データの初期化無し
+		GLBuffer(GLuint flag, GLuint dtype, GLuint stride);
+		//! データをbuffで初期化
+		GLBuffer(GLuint flag, GLuint dtype, GLuint stride, ByteBuff&& buff);
+		GLBuffer(GLuint flag, GLuint dtype, GLuint stride, const void* src, size_t length);
+
 		~GLBuffer() override;
 		void onDeviceLost() override;
 		void onDeviceReset() override;
 
+		void setBufferData(const void* src, size_t length);
+		void setBufferData(ByteBuff&& buff);
+
 		GLuint getBuffID() const;
-		GLuint getUnitSize() const;
 		GLuint getBuffType() const;
 		GLuint getStride() const;
-		GLuint getUnitFlag() const;
 		static GLuint GetUnitSize(GLuint flag);
 
 		void use() const;

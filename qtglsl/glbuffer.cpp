@@ -1,4 +1,5 @@
 #include "glresource.hpp"
+#include <cstring>
 
 const GLuint GLBuffer::cs_cnv[] = {
 	GL_FLOAT, 4,
@@ -15,21 +16,21 @@ const GLuint GLBuffer::cs_cnv[] = {
 };
 
 GLuint GLBuffer::getBuffID() const { return _idBuff; }
-GLuint GLBuffer::getUnitSize() const { return _unitSize; }
 GLuint GLBuffer::getBuffType() const { return _buffType; }
-GLuint GLBuffer::getStride() const { return _unitSize; }
-GLuint GLBuffer::getUnitFlag() const { return _unitFlag; }
+GLuint GLBuffer::getStride() const { return _stride; }
 
 void GLBuffer::use() const {
 	glBindBuffer(_buffType, getBuffID());
 	GL_ACheck()
 }
 void GLBuffer::_initBuffer() {
-	glGenBuffers(1, &_idBuff);
-	glBindBuffer(_buffType, _idBuff);
-	glBufferData(_buffType, _buff.size(), &_buff[0], _drawType);
-	glBindBuffer(_buffType, 0);
-	GL_ACheck()
+	if(!_buff.empty()) {
+		glGenBuffers(1, &_idBuff);
+		glBindBuffer(_buffType, _idBuff);
+		glBufferData(_buffType, _buff.size(), &_buff[0], _drawType);
+		glBindBuffer(_buffType, 0);
+		GL_ACheck()
+	}
 }
 
 void GLBuffer::onDeviceLost() {
@@ -45,21 +46,12 @@ GLBuffer::~GLBuffer() {
 	onDeviceLost();
 }
 
-GLBuffer::GLBuffer(GLuint flag, GLuint dtype, GLuint unitFlag, GLuint stride):
-		_buffType(flag), _drawType(dtype), _unitFlag(unitFlag),
-		_unitSize(GetUnitSize(unitFlag)), _stride(stride)
-{}
-GLBuffer::GLBuffer(GLuint flag, GLuint dtype, GLuint unitFlag, GLuint stride, const ByteBuff& buff):
-		GLBuffer(flag,dtype,unitFlag,stride)
-{
-	_buff = buff;
-	_initBuffer();
+GLBuffer::GLBuffer(GLuint flag, GLuint dtype, GLuint stride): _buffType(flag), _drawType(dtype), _stride(stride) {}
+GLBuffer::GLBuffer(GLuint flag, GLuint dtype, GLuint stride, const void* src, size_t length): GLBuffer(flag,dtype,stride) {
+	setBufferData(src, length);
 }
-GLBuffer::GLBuffer(GLuint flag, GLuint dtype, GLuint unitFlag, GLuint stride, ByteBuff&& buff):
-		GLBuffer(flag,dtype,unitFlag,stride)
-{
-	_buff.swap(buff);
-	_initBuffer();
+GLBuffer::GLBuffer(GLuint flag, GLuint dtype, GLuint stride, ByteBuff&& buff): GLBuffer(flag,dtype,stride) {
+	setBufferData(std::forward<ByteBuff>(buff));
 }
 
 GLuint GLBuffer::GetUnitSize(GLuint flag) {
@@ -68,4 +60,16 @@ GLuint GLBuffer::GetUnitSize(GLuint flag) {
 			return cs_cnv[i+1];
 	}
 	throw GLE_Error("invalid unit size");
+}
+
+void GLBuffer::setBufferData(const void* src, size_t length) {
+	onDeviceLost();
+	_buff.resize(length);
+	std::memcpy(&_buff[0], src, length);
+	onDeviceReset();
+}
+void GLBuffer::setBufferData(ByteBuff&& buff) {
+	onDeviceLost();
+	_buff.swap(buff);
+	onDeviceReset();
 }
