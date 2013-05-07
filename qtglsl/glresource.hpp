@@ -4,6 +4,8 @@
 #include <string>
 #include <memory>
 #include <vector>
+#include <sstream>
+#include <boost/format.hpp>
 #include "glhead.hpp"
 #define countof(elem) static_cast<int>(sizeof((elem))/sizeof((elem)[0]))
 
@@ -149,10 +151,34 @@ struct ErrID {
 
 //! OpenGLラッパークラス
 class GLDevice : public IGLResource {
-	const static ErrID cs_err[];
+	const static ErrID cs_err[5];
 	public:
-		static void checkError(const std::string& what);
+		template <class FMT>
+		static FMT& Tmp(FMT& fmt) { return fmt; }
+		template <class FMT, class T, class... Ts>
+		static FMT& Tmp(FMT& fmt, const T& t, const Ts&... ts) {
+			fmt % t;
+			return Tmp(fmt, ts...);
+		}
+
+		template <class... Ts>
+		static void checkError(const char* file, const char* func, int line, const std::string& what, const Ts&... ts) {
+			GLenum err = glGetError();
+			if(err != GL_NO_ERROR) {
+				for(const auto& e : cs_err) {
+					if(e._id == err) {
+						std::stringstream ss;
+						ss << "GLDevice check failed! (" << e._msg << ") file=" << file << "func=" << func << "line=" << line << std::endl;
+						boost::format fmt(what);
+						ss << Tmp(fmt, ts...).str();
+						throw GLE_Error(ss.str());
+					}
+				}
+			}
+		}
 };
+#define GLCheckArg(...) GLDevice::checkError(__FILE__, __func__, __LINE__, __VA_ARGS__);
+#define GLCheck() GLCheckArg("")
 
 enum ShType : unsigned int {
 	VERTEX, GEOMETRY, PIXEL,
@@ -204,3 +230,4 @@ class GLTexture : public IGLResource {
 		GLuint getTextureID() const;
 		bool operator == (const GLTexture& t) const;
 };
+using SPTexture = std::shared_ptr<GLTexture>;

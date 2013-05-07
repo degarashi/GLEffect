@@ -119,7 +119,7 @@ VDecl::VDecl(std::initializer_list<VDInfo> il) {
 					return;
 
 				glVertexAttribPointer(attrID, t2.elemSize, t2.elemFlag, t2.bNormalize, stride, (const GLvoid*)t2.offset);
-				GLDevice::checkError("VDArray::apply()");
+				GLCheck()
 			};
 		}
 
@@ -131,7 +131,7 @@ void VDecl::apply(const VData& vdata) const {
 	for(int i=0 ; i<VData::MAX_STREAM ; i++) {
 		auto& sp = vdata.spBuff[i];
 		glBindBuffer(GL_ARRAY_BUFFER, sp->getBuffID());
-		GLDevice::checkError("VDecl::apply()");
+		GLCheck()
 
 		GLuint stride = sp->getStride();
 		for(int j=_nEnt[i] ; j<_nEnt[i+1] ; j++)
@@ -469,7 +469,7 @@ TPStructR::TPStructR(const GLXStruct& gs, int tech, int pass) {
 		if(atID != -2)
 			throw GLE_LogicalError((boost::format("duplication of vertex semantics \"%1% : %2%\"") % p->name % GLSem_::cs_typeStr[p->sem]).str());
 		atID = glGetAttribLocation(_prog->getProgramID(), p->name.c_str());
-		GLDevice::checkError("GetAttribLocation()");
+		GLCheck()
 		// -1の場合は警告を出す(もしかしたらシェーダー内で使ってないだけかもしれない)
 	}
 

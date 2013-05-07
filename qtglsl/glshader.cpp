@@ -30,26 +30,18 @@ GLE_InvalidArgument::GLE_InvalidArgument(const std::string& shname, const std::s
 
 // ---------------------- GLDevice ----------------------
 ErrID::ErrID(int id, const char* msg): _id(id), _msg(msg) {}
-const ErrID GLDevice::cs_err[] = {
+const ErrID GLDevice::cs_err[5] = {
 	ErrID(GL_INVALID_VALUE, "Numeric argument out of range"),
 	ErrID(GL_INVALID_ENUM, "Enum argument out of range"),
 	ErrID(GL_INVALID_OPERATION, "Operation illegal in current state"),
 	ErrID(GL_INVALID_FRAMEBUFFER_OPERATION, "Framebuffer is incomplete"),
 	ErrID(GL_OUT_OF_MEMORY, "Not enough memory left to execute command")
 };
-void GLDevice::checkError(const std::string& what) {
-	GLenum err = glGetError();
-	if(err != GL_NO_ERROR) {
-		for(const auto& e : cs_err) {
-			if(e._id == err)
-				throw GLE_Error(e._msg);
-		}
-	}
-}
+
 // ---------------------- GLShader ----------------------
 void GLShader::_initShader() {
 	_idSh = glCreateShader(_flag);
-	GLDevice::checkError("create shader");
+	GLCheck()
 	const auto* pStr = _source.c_str();
 	glShaderSource(_idSh, 1, &pStr, nullptr);
 	glCompileShader(_idSh);
@@ -93,7 +85,7 @@ void GLProgram::_initProgram() {
 		// Geometryシェーダー以外は必須
 		if(sh) {
 			glAttachShader(_idProg, sh->getShaderID());
-			GLDevice::checkError("GLProgram::glAttachShader()");
+			GLCheck()
 		} else {
 			if(i != ShType::GEOMETRY)
 				throw GLE_Error("missing shader elements (vertex or fragment)");
@@ -152,5 +144,5 @@ int GLProgram::getAttribIDNc(const std::string& name) const {
 }
 void GLProgram::use() const {
 	glUseProgram(getProgramID());
-	GLDevice::checkError("GLProgram::use()");
+	GLCheck()
 }

@@ -20,7 +20,7 @@ SOURCES += main.cpp\
 	gltexture.cpp \
 	glx_output.cpp \
 	glx_parse.cpp \
-    glbuffer.cpp
+	glbuffer.cpp
 
 HEADERS  += mainwindow.h \
 	glext.h \

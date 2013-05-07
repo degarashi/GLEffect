@@ -22,14 +22,14 @@ GLuint GLBuffer::getUnitFlag() const { return _unitFlag; }
 
 void GLBuffer::use() const {
 	glBindBuffer(_buffType, getBuffID());
-	GLDevice::checkError("GLBuffer::use()");
+	GLCheck()
 }
 void GLBuffer::_initBuffer() {
 	glGenBuffers(1, &_idBuff);
 	glBindBuffer(_buffType, _idBuff);
 	glBufferData(_buffType, _buff.size(), &_buff[0], _drawType);
 	glBindBuffer(_buffType, 0);
-	GLDevice::checkError("GLBuffer::_initBuffer()");
+	GLCheck()
 }
 
 void GLBuffer::onDeviceLost() {
