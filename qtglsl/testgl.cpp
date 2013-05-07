@@ -3,8 +3,7 @@
 #include "glx.hpp"
 
 void TestGLX() {
-	GLEffect gle;
-	gle.readGLX("test.glx");
+	GLEffect gle("test.glx");
 	GLint techID = gle.getTechID("TheTech");
 	GL_ACheck()
 	gle.setTechnique(techID, true);

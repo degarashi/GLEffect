@@ -199,6 +199,9 @@ class GLEffect {
 	void _refreshIStream();
 
 	public:
+		//! Effectファイル(gfx)を読み込む
+		GLEffect(const std::string& fPath);
+
 		//! GLEffectで発生する例外基底
 		struct EC_Base : std::runtime_error {
 			using std::runtime_error::runtime_error;
@@ -224,8 +227,6 @@ class GLEffect {
 		//! システムセマンティクス(3D)
 		//! システムセマンティクス(Both)
 
-		//! Effectファイル(gfx)を読み込む
-		void readGLX(const std::string& fPath);
 		//! Uniform変数設定 (Tech/Passで指定された名前とセマンティクスのすり合わせを行う)
 		GLint getUniformID(const std::string& name);
 		template <class T>

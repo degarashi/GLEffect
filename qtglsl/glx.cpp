@@ -130,12 +130,15 @@ VDecl::VDecl(std::initializer_list<VDInfo> il) {
 void VDecl::apply(const VData& vdata) const {
 	for(int i=0 ; i<VData::MAX_STREAM ; i++) {
 		auto& sp = vdata.spBuff[i];
-		glBindBuffer(GL_ARRAY_BUFFER, sp->getBuffID());
-		GLCheck()
+		// VStreamが設定されていればBindする
+		if(sp) {
+			glBindBuffer(GL_ARRAY_BUFFER, sp->getBuffID());
+			GL_ACheck()
 
-		GLuint stride = sp->getStride();
-		for(int j=_nEnt[i] ; j<_nEnt[i+1] ; j++)
-			_func[j](stride, vdata.attrID);
+			GLuint stride = sp->getStride();
+			for(int j=_nEnt[i] ; j<_nEnt[i+1] ; j++)
+				_func[j](stride, vdata.attrID);
+		}
 	}
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
@@ -235,7 +238,7 @@ void ArgChecker::finalizeCheck() {
 }
 
 // ----------------- GLEffect -----------------
-void GLEffect::readGLX(const std::string& fPath) {
+GLEffect::GLEffect(const std::string& fPath) {
 	std::ifstream ifs(fPath);
 	if(!ifs.is_open())
 		throw EC_FileNotFound(fPath);
@@ -254,7 +257,6 @@ void GLEffect::readGLX(const std::string& fPath) {
 		std::cout << "<but not reached to end>" << std::endl
 			<< "remains: " << std::endl << std::string(itr, str.cend()) << std::endl;
 	}
-
 	// テスト表示
 	result.output(std::cout);
 
@@ -368,15 +370,19 @@ void GLEffect::_refreshProgram() {
 }
 namespace {
 	struct UniVisitor : boost::static_visitor<> {
-		GLEffect&	_gle;
 		GLint		_id;
 
-		UniVisitor(GLEffect& e): _gle(e) {}
 		void setID(GLint id) { _id = id; }
-		template <class T>
-		void operator()(const T& t) {
-			_gle.setUniform(t, _id);
+		void operator()(bool b) const { glUniform1i(_id, b ? 0 : 1); }
+		void operator()(int v) const { glUniform1i(_id, v); }
+		void operator()(float v) const { glUniform1f(_id, v); }
+		void operator()(const vec3& v) const { glUniform3f(_id, v.x, v.y, v.z); }
+		void operator()(const vec4& v) const { glUniform4f(_id, v.x, v.y, v.z, v.w);}
+		void operator()(const Mat23& m) const {
+			Mat33 m3 = m.toMat33();
+			glUniformMatrix3fv(_id, 9, true, m3.m);
 		}
+		void operator()(const SPTexture& t) const {}
 	};
 }
 void GLEffect::_refreshUniform() {
@@ -385,7 +391,7 @@ void GLEffect::_refreshUniform() {
 		_refreshProgram();
 		if(!_uniMapID.empty()) {
 			// UnifParamの変数をシェーダーに設定
-			UniVisitor visitor(*this);
+			UniVisitor visitor;
 			for(auto itr=_uniMapID.begin() ; itr!=_uniMapID.end() ; itr++) {
 				visitor.setID(itr->first);
 				boost::apply_visitor(visitor, itr->second);
@@ -688,7 +694,6 @@ const UniMapID& TPStructR::getUniformDefault() const { return _defValue; }
 const UniEntryMap& TPStructR::getUniformEntries() const { return _noDefValue; }
 
 void TPStructR::setVertex(const SPVDecl& vdecl, const SPBuffer (&stream)[VData::MAX_STREAM]) const {
-	_prog->use();
 	vdecl->apply(VData(stream, _vAttrID));
 }
 const SPProg& TPStructR::getProgram() const { return _prog; }
