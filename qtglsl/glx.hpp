@@ -2,6 +2,7 @@
 
 #include <functional>
 #include <unordered_map>
+#include <unordered_set>
 #include <boost/lexical_cast.hpp>
 #include "glresource.hpp"
 #include "glx_parse.hpp"
@@ -82,8 +83,13 @@ class VDecl {
 };
 using SPVDecl = std::shared_ptr<VDecl>;
 
-using DefVal = std::pair<std::string, boost::variant<GLTexture, vec4, float, bool>>;
-using Setting = boost::variant<DefVal, BoolSettingR, ValueSettingR>;
+using UniVal = boost::variant<bool, int, float, vec3, vec4, Mat23, SPTexture>;
+using UniMapStr = std::unordered_map<std::string, UniVal>;
+using UniMapID = std::unordered_map<GLint, UniVal>;
+using UniEntryMap = std::unordered_set<std::string>;
+
+// OpenGLのレンダリング設定
+using Setting = boost::variant<BoolSettingR, ValueSettingR>;
 using SettingList = std::vector<Setting>;
 //! Tech | Pass の分だけ作成
 class TPStructR {
@@ -95,6 +101,9 @@ class TPStructR {
 	//! Setting: Uniformデフォルト値(texture, vector, float, bool)設定を含む。GLDeviceの設定クラスリスト
 	SettingList		_setting;
 
+	UniEntryMap		_noDefValue;	//!< Uniform非デフォルト値エントリリスト (主にユーザーの入力チェック用)
+	UniMapID		_defValue;		//!< Uniformデフォルト値と対応するID
+
 	public:
 		TPStructR();
 		TPStructR(TPStructR&& tp);
@@ -103,10 +112,14 @@ class TPStructR {
 		bool findSetting(const Setting& s) const;
 		void swap(TPStructR& tp) noexcept;
 
+		const UniMapID& getUniformDefault() const;
+		const UniEntryMap& getUniformEntries() const;
+
+		const SPProg& getProgram() const;
 		//! OpenGLに設定を適用
 		void applySetting() const;
 		//! 頂点ポインタを設定 (GLXから呼ぶ)
-		void setVertex(const VDecl& vdecl, const SPBuffer (&stream)[VData::MAX_STREAM]) const;
+		void setVertex(const SPVDecl& vdecl, const SPBuffer (&stream)[VData::MAX_STREAM]) const;
 		//! 設定差分を求める
 		static TPStructR calcDiff(const TPStructR& from, const TPStructR& to);
 };
@@ -133,6 +146,16 @@ struct ArgChecker : boost::static_visitor<> {
 	void operator()(bool b);
 	void finalizeCheck();
 };
+
+namespace Bit {
+	template <class T0, class T1>
+	inline bool ChClear(T0& t, const T1& tbit) {
+		bool bRet = t & tbit;
+		t &= ~tbit;
+		return bRet;
+	}
+}
+
 //! GLXエフェクト管理クラス
 class GLEffect {
 	using UseArray = std::vector<std::string>;
@@ -141,12 +164,39 @@ class GLEffect {
 
 	using TechMap = std::unordered_map<GL16ID, TPStructR>;
 	using DiffCache = std::unordered_map<GLDiffID, int>;
+	using TechName = std::vector<std::vector<std::string>>;
 
 	TechMap			_techMap;		//!< ゼロから設定を構築する場合の情報や頂点セマンティクス
 	DiffCache		_diffCache;		//!< セッティング差分を格納
-	SPVDecl			_spVDecl;		//!< 現在アクティブな頂点定義
+	TechName		_techName;		//!< Tech名とPass名のセット
+
+	// --------------- 現在アクティブな設定 ---------------
+	SPVDecl			_spVDecl;
 	SPBuffer		_vBuffer[VData::MAX_STREAM],
 					_iBuffer;
+	using TPID = boost::optional<int>;
+	TPID			_idTech, _idTechCur,
+					_idPass, _idPassCur;
+	bool			_bDefaultParam;	//!< Tech切替時、trueならデフォルト値読み込み
+	UniMapID		_uniMapID,		//!< 設定待ちのエントリ
+					_uniMapIDTmp;	//!< 設定し終わったエントリ
+	using TPRef = boost::optional<const TPStructR&>;
+	TPRef			_tps;
+
+	enum REFLAG {
+		REFL_PROGRAM = 0x01,		//!< シェーダーのUse宣言
+		REFL_UNIFORM = 0x02,		//!< キャッシュしたUniform値の設定
+		REFL_VSTREAM = 0x04,		//!< VStreamの設定
+		REFL_ISTREAM = 0x08,		//!< IStreamの設定
+		REFL_ALL = 0x0f
+	};
+	uint32_t		_rflg = REFL_ALL;
+
+	// ----- リフレッシュ関数 -----
+	void _refreshProgram();
+	void _refreshUniform();
+	void _refreshVStream();
+	void _refreshIStream();
 
 	public:
 		//! GLEffectで発生する例外基底
@@ -177,31 +227,37 @@ class GLEffect {
 		//! Effectファイル(gfx)を読み込む
 		void readGLX(const std::string& fPath);
 		//! Uniform変数設定 (Tech/Passで指定された名前とセマンティクスのすり合わせを行う)
-		void setUniform(const vec4& v, const std::string& name);
-		void setUniform(const vec3& v, const std::string& name);
-		void setUniform(const Mat23& m, const std::string& name);
-		//! 現在セットされているUniform変数の保存
-		void* saveParams() const;
+		GLint getUniformID(const std::string& name);
+		template <class T>
+		void setUniform(const T& v, GLint id) {
+			_rflg |= REFL_UNIFORM;
+			_uniMapID.insert(std::make_pair(id, v));
+			GLCheck()
+		}
+
+		//! 現在セットされているUniform変数の保存用
+		const UniMapID& getUniformMap() const;
 		//! セーブしておいたUniform変数群を復元
-		void restoreParams(void* ptr);
+		void inputParams(const UniMapStr& u);
+		void inputParams(const UniMapID& u);
 		//! 実際にOpenGLへ各種設定を適用
 		void applySetting();
 
 		//! 頂点宣言
 		/*! \param[in] decl 頂点定義クラスのポインタ(定数を前提) */
 		void setVDecl(const SPVDecl& decl);
-		void setVStream(const SPBuffer& sp);
+		void setVStream(const SPBuffer& sp, int n);
 		void setIStream(const SPBuffer& sp);
 		//! Tech指定
-		void setTechnique(const std::string& tech);
+		/*!	Techを切り替えるとUniformがデフォルトにリセットされる
+			切替時に引数としてUniMapを渡すとそれで初期化 */
+		void setTechnique(int techID, bool bDefault);
+		int getTechID(const std::string& tech) const;
+		int getCurTechID() const;
 		//! Pass指定
-		void setPass(int n);
-		void setPass(const std::string& pass);
-		//! マクロ変数指定 (float, vector, string)
-		template <class T>
-		void setMacro(const std::string& entry, const T& value) {
-			boost::lexical_cast<std::string>(value);
-		}
+		void setPass(int passID);
+		int getPassID(const std::string& pass) const;
+		int getCurPassID() const;
 };
 namespace std {
 	template <>

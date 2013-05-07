@@ -152,7 +152,7 @@ void TPStructR::swap(TPStructR& t) noexcept {
 }
 bool TPStructR::findSetting(const Setting& s) const {
 	auto itr = std::find(_setting.begin(), _setting.end(), s);
-	return itr!=_setting.end() && (*itr)==s;
+	return itr!=_setting.end();
 }
 TPStructR TPStructR::calcDiff(const TPStructR& from, const TPStructR& to) {
 	// toと同じ設定がfrom側にあればスキップ
@@ -259,16 +259,163 @@ void GLEffect::readGLX(const std::string& fPath) {
 	result.output(std::cout);
 
 	// Tech/Passを順に実行形式へ変換
+	// (一緒にTech/Pass名リストを構築)
 	int nI = result.tpL.size();
+	_techName.resize(nI);
 	for(int techID=0 ; techID<nI ; techID++) {
+		auto& nmm = _techName[techID];
+		auto& tpTech = result.tpL.at(techID);
 		// Pass毎に処理
 		int nJ = result.tpL[techID].tpL.size();
-		for(int passID=0 ; passID<nJ ; passID++)
+		nmm.resize(nJ+1);
+		nmm[0] = tpTech.name;
+		for(int passID=0 ; passID<nJ ; passID++) {
+			nmm[passID+1] = tpTech.tpL.at(passID).get().name;
 			_techMap.insert(std::make_pair(GL16ID(techID, passID), TPStructR(result, techID, passID)));
+		}
 	}
 }
 void GLEffect::setVDecl(const SPVDecl& decl) {
 	_spVDecl = decl;
+	_rflg |= REFL_VSTREAM;
+}
+void GLEffect::setVStream(const SPBuffer& sp, int n) {
+	_vBuffer[n] = sp;
+	_rflg |= REFL_VSTREAM;
+}
+void GLEffect::setIStream(const SPBuffer& sp) {
+	_iBuffer = sp;
+	_rflg |= REFL_ISTREAM;
+}
+void GLEffect::setTechnique(int techID, bool bDefault) {
+	if(_idTech != techID) {
+		_idTech = techID;
+		_bDefaultParam = bDefault;
+		_rflg |= REFL_PROGRAM;
+	}
+}
+void GLEffect::setPass(int passID) {
+	if(_idPass != passID) {
+		_idPass = passID;
+		_rflg |= REFL_PROGRAM;
+	}
+}
+int GLEffect::getTechID(const std::string& tech) const {
+	int nT = _techName.size();
+	for(int i=0 ; i<nT ; i++) {
+		if(_techName[i][0] == tech)
+			return i;
+	}
+	return -1;
+}
+int GLEffect::getPassID(const std::string& pass) const {
+	if(!_idTech)
+		throw GLE_Error("tech is not selected");
+	auto& tech = _techName[*_idTech];
+	int nP = tech.size();
+	for(int i=1 ; i<nP ; i++) {
+		if(tech[i] == pass)
+			return i-1;
+	}
+	return -1;
+}
+int GLEffect::getCurPassID() const {
+	if(_idPass)
+		return *_idPass;
+	throw GLE_Error("pass is not selected");
+}
+int GLEffect::getCurTechID() const {
+	if(_idTech)
+		return *_idTech;
+	throw GLE_Error("tech is not selected");
+}
+
+// Uniformは一旦キャッシュにとっておいて後でセット
+// Uniformを毎回名前で検索するのがアレなのでIDを取得
+// 現在選択しているShaderをUseし、頂点ポインタの設定
+void GLEffect::applySetting() {
+	if(_rflg != 0) {
+		_refreshProgram();
+		_refreshUniform();
+		_refreshVStream();
+		_refreshIStream();
+	}
+}
+void GLEffect::_refreshProgram() {
+	if(Bit::ChClear(_rflg, REFL_PROGRAM)) {
+		if(!_idTech || !_idPass)
+			throw GLE_Error("tech or pass is not selected");
+
+		GL16ID id(*_idTech, *_idPass);
+		auto& tps = _techMap.at(id);
+		// [_idTechCur|_idPassCur] から [_idTech|_idPass] への遷移
+		// とりあえず全設定
+		tps.getProgram()->use();
+		tps.applySetting();
+
+		_uniMapIDTmp.clear();
+		if(_bDefaultParam) {
+			// デフォルト値読み込み
+			_uniMapID = tps.getUniformDefault();
+		} else
+			_uniMapID.clear();
+
+		_tps = tps;
+		_idTechCur = _idTech;
+		_idPassCur = _idPass;
+	}
+}
+namespace {
+	struct UniVisitor : boost::static_visitor<> {
+		GLEffect&	_gle;
+		GLint		_id;
+
+		UniVisitor(GLEffect& e): _gle(e) {}
+		void setID(GLint id) { _id = id; }
+		template <class T>
+		void operator()(const T& t) {
+			_gle.setUniform(t, _id);
+		}
+	};
+}
+void GLEffect::_refreshUniform() {
+	// 現状なら_uniMapID.empty()だけで判定できるが便宜上
+	if(Bit::ChClear(_rflg, REFL_UNIFORM)) {
+		_refreshProgram();
+		if(!_uniMapID.empty()) {
+			// UnifParamの変数をシェーダーに設定
+			UniVisitor visitor(*this);
+			for(auto itr=_uniMapID.begin() ; itr!=_uniMapID.end() ; itr++) {
+				visitor.setID(itr->first);
+				boost::apply_visitor(visitor, itr->second);
+				// 設定し終わったらエントリを削除 (設定済みの方へ移す)
+				_uniMapIDTmp.insert(*itr);
+			}
+			_uniMapID.clear();
+		}
+	}
+}
+void GLEffect::_refreshVStream() {
+	if(Bit::ChClear(_rflg, REFL_VSTREAM)) {
+		_refreshProgram();
+		// VertexAttribをシェーダーに設定
+		_tps->setVertex(_spVDecl, _vBuffer);
+	}
+}
+void GLEffect::_refreshIStream() {
+	if(Bit::ChClear(_rflg, REFL_ISTREAM)) {
+		_refreshProgram();
+		// ElementArrayをシェーダーに設定
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, _iBuffer->getBuffID());
+		GLCheck()
+	}
+}
+
+GLint GLEffect::getUniformID(const std::string& name) {
+	_refreshProgram();
+	GLint loc = glGetUniformLocation(_tps->getProgram()->getProgramID(), name.c_str());
+	GLCheckArg((boost::format("GLEffect::getUniformID(%1%)")%name).str())
+	return loc;
 }
 
 namespace {
@@ -396,6 +543,33 @@ namespace {
 	}
 }
 
+namespace {
+	struct Visitor : boost::static_visitor<> {
+		GLuint		pgID;
+		GLint		uniID;
+		UniMapID	result;
+
+		void setKey(const std::string& key) {
+			uniID = glGetUniformLocation(pgID, key.c_str());
+		}
+		template <class T>
+		void _addResult(T&& t) {
+			if(uniID >= 0)
+				result.insert(std::make_pair(uniID, std::forward<T>(t)));
+		}
+
+		void operator()(const std::vector<float>& v) {
+			if(v.size() == 3)
+				_addResult(vec3{v[0],v[1],v[2]});
+			else
+				_addResult(vec4{v[0],v[1],v[2],v[3]});
+		}
+		template <class T>
+		void operator()(const T& v) {
+			_addResult(v);
+		}
+	};
+}
 TPStructR::TPStructR(const GLXStruct& gs, int tech, int pass) {
 	auto& tp = gs.tpL.at(tech);
 	auto& tps = tp.tpL[pass].get();
@@ -414,6 +588,7 @@ TPStructR::TPStructR(const GLXStruct& gs, int tech, int pass) {
 	TPSDupl dupl(gs, tech, pass);
 	SPShader shP[ShType::NUM_SHTYPE];
 	std::vector<const AttrEntry*> attL;
+	std::vector<const UnifEntry*> unifL;
 	for(int i=0 ; i<countof(selectSh) ; i++) {
 		auto* shp = selectSh[i];
 		if(!shp)
@@ -436,8 +611,10 @@ TPStructR::TPStructR(const GLXStruct& gs, int tech, int pass) {
 			OutputS(ss, varL); }
 		{	auto csL = dupl.exportEntries<ConstStruct,ConstEntry>(GLBlocktype_::constT, &GLXStruct::csM);
 			OutputS(ss, csL); }
-		{	auto unifL = dupl.exportEntries<UnifStruct,UnifEntry>(GLBlocktype_::uniformT, &GLXStruct::uniM);
-			OutputS(ss, unifL); }
+
+		// Uniformリストは後で使う
+		unifL = dupl.exportEntries<UnifStruct,UnifEntry>(GLBlocktype_::uniformT, &GLXStruct::uniM);
+		OutputS(ss, unifL);
 
 		const ShStruct& s = gs.shM.at(shp->shName);
 		// シェーダー引数の型チェック
@@ -477,6 +654,18 @@ TPStructR::TPStructR(const GLXStruct& gs, int tech, int pass) {
 	SettingList sl = dupl.exportSetting();
 	_setting.swap(sl);
 
+	// Uniform変数にデフォルト値がセットしてある物をリストアップ
+	Visitor visitor;
+	for(const auto* p : unifL) {
+		if(p->defStr) {
+			// 変数名をIDに変換
+			visitor.setKey(p->name);
+			boost::apply_visitor(visitor, *p->defStr);
+		} else
+			_noDefValue.insert(p->name);
+	}
+	_defValue.swap(visitor.result);
+
 	applySetting();
 }
 
@@ -488,13 +677,15 @@ void TPStructR::applySetting() const {
 		void operator()(const ValueSettingR& vs) const {
 			vs.action();
 		}
-		void operator()(const DefVal& v) const {}
 	};
 	for(auto& st : _setting)
 		boost::apply_visitor(Visitor(), st);
 }
+const UniMapID& TPStructR::getUniformDefault() const { return _defValue; }
+const UniEntryMap& TPStructR::getUniformEntries() const { return _noDefValue; }
 
-void TPStructR::setVertex(const VDecl &vdecl, const SPBuffer (&stream)[VData::MAX_STREAM]) const {
+void TPStructR::setVertex(const SPVDecl& vdecl, const SPBuffer (&stream)[VData::MAX_STREAM]) const {
 	_prog->use();
-	vdecl.apply(VData(stream, _vAttrID));
+	vdecl->apply(VData(stream, _vAttrID));
 }
+const SPProg& TPStructR::getProgram() const { return _prog; }
