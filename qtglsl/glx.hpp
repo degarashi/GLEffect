@@ -236,7 +236,7 @@ class GLEffect {
 		}
 
 		//! 現在セットされているUniform変数の保存用
-		const UniMapID& getUniformMap() const;
+		const UniMapID& getUniformMap();
 		//! セーブしておいたUniform変数群を復元
 		void inputParams(const UniMapStr& u);
 		void inputParams(const UniMapID& u);
@@ -258,6 +258,11 @@ class GLEffect {
 		void setPass(int passID);
 		int getPassID(const std::string& pass) const;
 		int getCurPassID() const;
+
+		//! IStreamを使用して描画
+		void drawIndexed(GLenum mode, GLsizei count, GLuint offset=0);
+		//! IStreamを使わず描画
+		void draw(GLenum mode, GLint first, GLsizei count);
 };
 namespace std {
 	template <>

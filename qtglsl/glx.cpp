@@ -117,7 +117,7 @@ VDecl::VDecl(std::initializer_list<VDInfo> il) {
 				auto attrID = attr[t2.semID];
 				if(attrID < 0)
 					return;
-
+				glEnableVertexAttribArray(attrID);
 				glVertexAttribPointer(attrID, t2.elemSize, t2.elemFlag, t2.bNormalize, stride, (const GLvoid*)t2.offset);
 				GL_ACheck()
 			};
@@ -424,6 +424,21 @@ GLint GLEffect::getUniformID(const std::string& name) {
 	GLint loc = glGetUniformLocation(_tps->getProgram()->getProgramID(), name.c_str());
 	GL_ACheckArg((boost::format("GLEffect::getUniformID(%1%)")%name).str())
 	return loc;
+}
+void GLEffect::draw(GLenum mode, GLint first, GLsizei count) {
+	applySetting();
+	glDrawArrays(mode, first, count);
+	GL_ACheck();
+}
+void GLEffect::drawIndexed(GLenum mode, GLsizei count, GLuint offset) {
+	applySetting();
+	GLenum sz = _iBuffer->getStride() == sizeof(GLshort) ? GL_UNSIGNED_SHORT : GL_UNSIGNED_BYTE;
+	glDrawElements(mode, count, sz, reinterpret_cast<const GLvoid*>(offset));
+	GL_ACheck();
+}
+const UniMapID& GLEffect::getUniformMap() {
+	_refreshUniform();
+	return _uniMapIDTmp;
 }
 
 namespace {
