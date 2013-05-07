@@ -41,7 +41,7 @@ const ErrID GLDevice::cs_err[5] = {
 // ---------------------- GLShader ----------------------
 void GLShader::_initShader() {
 	_idSh = glCreateShader(_flag);
-	GLCheck()
+
 	const auto* pStr = _source.c_str();
 	glShaderSource(_idSh, 1, &pStr, nullptr);
 	glCompileShader(_idSh);
@@ -85,7 +85,7 @@ void GLProgram::_initProgram() {
 		// Geometryシェーダー以外は必須
 		if(sh) {
 			glAttachShader(_idProg, sh->getShaderID());
-			GLCheck()
+			GL_ACheck()
 		} else {
 			if(i != ShType::GEOMETRY)
 				throw GLE_Error("missing shader elements (vertex or fragment)");
@@ -144,5 +144,5 @@ int GLProgram::getAttribIDNc(const std::string& name) const {
 }
 void GLProgram::use() const {
 	glUseProgram(getProgramID());
-	GLCheck()
+	GL_ACheck()
 }

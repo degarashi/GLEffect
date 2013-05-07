@@ -232,7 +232,6 @@ class GLEffect {
 		void setUniform(const T& v, GLint id) {
 			_rflg |= REFL_UNIFORM;
 			_uniMapID.insert(std::make_pair(id, v));
-			GLCheck()
 		}
 
 		//! 現在セットされているUniform変数の保存用

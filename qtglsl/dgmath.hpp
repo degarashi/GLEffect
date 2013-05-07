@@ -21,6 +21,17 @@ bool operator == (const vec##n& v) const { \
 
 DEF_VEC(4)
 DEF_VEC(3)
+
+struct Mat33 {
+	float m[3*3];
+	bool operator == (const Mat33& tm) const {
+		for(int i=0 ; i<countof(m) ; i++) {
+			if(m[i] != tm.m[i])
+				return false;
+		}
+		return true;
+	}
+};
 struct Mat23 {
 	float m[3*2];
 	bool operator == (const Mat23& tm) const {
@@ -29,5 +40,10 @@ struct Mat23 {
 				return false;
 		}
 		return true;
+	}
+	Mat33 toMat33() const {
+		return Mat33{m[0],m[1],0,
+						m[2],m[3],0,
+						m[4],m[5],1};
 	}
 };

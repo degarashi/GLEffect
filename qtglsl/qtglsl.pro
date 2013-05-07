@@ -34,6 +34,6 @@ HEADERS  += mainwindow.h \
 FORMS    += mainwindow.ui
 
 QMAKE_CXXFLAGS += -std=c++11 -Wno-sequence-point -Wno-unused-parameter -Wno-unused-variable
-QMAKE_CXX = g++-4.80
+QMAKE_CXX = 'g++-4.80 -DDEBUG'
 QMAKE_LINK = g++-4.80
 LIBS += -lGLU

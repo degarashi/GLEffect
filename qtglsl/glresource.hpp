@@ -161,24 +161,60 @@ class GLDevice : public IGLResource {
 			return Tmp(fmt, ts...);
 		}
 
-		template <class... Ts>
-		static void checkError(const char* file, const char* func, int line, const std::string& what, const Ts&... ts) {
-			GLenum err = glGetError();
-			if(err != GL_NO_ERROR) {
+		static void output_Throw(const std::string& msg) {
+			throw GLE_Error(msg);
+		}
+		static void output_Print(const std::string& msg) {
+			std::cout << msg;
+		}
+
+		//! OpenGLのエラーに対して例外又は警告を出す
+		template <class OUTF, class... Ts>
+		static void checkError(OUTF outf, const char* file, const char* func, int line, const std::string& what, const Ts&... ts) {
+			GLenum err;
+			while((err = glGetError()) != GL_NO_ERROR) {
 				for(const auto& e : cs_err) {
 					if(e._id == err) {
+						using std::endl;
 						std::stringstream ss;
-						ss << "GLDevice check failed! (" << e._msg << ") file=" << file << "func=" << func << "line=" << line << std::endl;
+						ss << "GLDevice check failed! (" << e._msg << ") at" << endl
+							<< "file=" << file << endl
+							<< "func=" << func << endl
+							<< "line=" << line << endl;
 						boost::format fmt(what);
 						ss << Tmp(fmt, ts...).str();
-						throw GLE_Error(ss.str());
+
+						outf(ss.str());
 					}
 				}
+				outf("unknown OpenGL error!");
 			}
 		}
+		//! エラー値を出力しなくなるまでループする
+		static void resetError() {
+			while(glGetError() != GL_NO_ERROR);
+		}
 };
-#define GLCheckArg(...) GLDevice::checkError(__FILE__, __func__, __LINE__, __VA_ARGS__);
-#define GLCheck() GLCheckArg("")
+#ifdef DEBUG
+	// OpenGLに関するアサート集
+	#define GL_ACheckArg(...) GLDevice::checkError(GLDevice::output_Throw, __FILE__, __func__, __LINE__, __VA_ARGS__);
+	#define GL_ACheck() GL_ACheckArg("")
+	#define GL_AWarnArg(...) GLDevice::checkError(GLDevice::output_Print, __FILE__, __func__, __LINE__, __VA_ARGS__);
+	#define GL_AWarn() GL_AWarnArg("")
+	#define GL_AResetError() GLDevice::resetError();
+#else
+	#define GL_ACheckArg(...)
+	#define GL_ACheck()
+	#define GL_AWarnArg(...)
+	#define GL_AWarn()
+	#define GL_AResetError()
+#endif
+// Debug/Releaseに関係なくエラーチェックをしたい時用
+#define GL_CheckArg(...) GLDevice::checkError(GLDevice::output_Throw, __FILE__, __func__, __LINE__, __VA_ARGS__);
+#define GL_Check() GL_CheckArg("")
+#define GL_WarnArg(...) GLDevice::checkError(GLDevice::output_Print, __FILE__, __func__, __LINE__, __VA_ARGS__);
+#define GL_Warn() GL_WarnArg("")
+#define GL_ResetError() GLDevice::resetError();
 
 enum ShType : unsigned int {
 	VERTEX, GEOMETRY, PIXEL,

@@ -119,7 +119,7 @@ VDecl::VDecl(std::initializer_list<VDInfo> il) {
 					return;
 
 				glVertexAttribPointer(attrID, t2.elemSize, t2.elemFlag, t2.bNormalize, stride, (const GLvoid*)t2.offset);
-				GLCheck()
+				GL_ACheck()
 			};
 		}
 
@@ -274,6 +274,7 @@ void GLEffect::readGLX(const std::string& fPath) {
 			_techMap.insert(std::make_pair(GL16ID(techID, passID), TPStructR(result, techID, passID)));
 		}
 	}
+	GL_ACheck()
 }
 void GLEffect::setVDecl(const SPVDecl& decl) {
 	_spVDecl = decl;
@@ -388,6 +389,7 @@ void GLEffect::_refreshUniform() {
 			for(auto itr=_uniMapID.begin() ; itr!=_uniMapID.end() ; itr++) {
 				visitor.setID(itr->first);
 				boost::apply_visitor(visitor, itr->second);
+				GL_ACheck();
 				// 設定し終わったらエントリを削除 (設定済みの方へ移す)
 				_uniMapIDTmp.insert(*itr);
 			}
@@ -407,14 +409,14 @@ void GLEffect::_refreshIStream() {
 		_refreshProgram();
 		// ElementArrayをシェーダーに設定
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, _iBuffer->getBuffID());
-		GLCheck()
+		GL_ACheck()
 	}
 }
 
 GLint GLEffect::getUniformID(const std::string& name) {
 	_refreshProgram();
 	GLint loc = glGetUniformLocation(_tps->getProgram()->getProgramID(), name.c_str());
-	GLCheckArg((boost::format("GLEffect::getUniformID(%1%)")%name).str())
+	GL_ACheckArg((boost::format("GLEffect::getUniformID(%1%)")%name).str())
 	return loc;
 }
 
@@ -551,6 +553,7 @@ namespace {
 
 		void setKey(const std::string& key) {
 			uniID = glGetUniformLocation(pgID, key.c_str());
+			GL_AWarn()
 		}
 		template <class T>
 		void _addResult(T&& t) {
@@ -646,7 +649,7 @@ TPStructR::TPStructR(const GLXStruct& gs, int tech, int pass) {
 		if(atID != -2)
 			throw GLE_LogicalError((boost::format("duplication of vertex semantics \"%1% : %2%\"") % p->name % GLSem_::cs_typeStr[p->sem]).str());
 		atID = glGetAttribLocation(_prog->getProgramID(), p->name.c_str());
-		GLCheck()
+		GL_ACheck()
 		// -1の場合は警告を出す(もしかしたらシェーダー内で使ってないだけかもしれない)
 	}
 
