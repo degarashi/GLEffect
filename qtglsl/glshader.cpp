@@ -6,7 +6,7 @@
 #undef GLDEFINE
 
 // OpenGL関数ロード
-#define GLDEFINE(name,type)		name = (type)glXGetProcAddress(reinterpret_cast<const GLubyte*>(#name)); \
+#define GLDEFINE(name,type)		name = (type)glXGetProcAddress((const GLubyte*)#name); \
 		if(!name) throw std::runtime_error(std::string("error on loading GL function \"") + #name + '\"');
 	void LoadXGLFunc() {
 		#include "glfunc.inc"
