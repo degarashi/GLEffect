@@ -113,11 +113,12 @@ VDecl::VDecl(std::initializer_list<VDInfo> il) {
 	for(int i=0 ; i<countof(tmp) ; i++) {
 		_nEnt[i] = cur;
 		for(auto& t2 : tmp[i]) {
-			_func[cur] = [&t2](GLuint stride, const VData::AttrA& attr) {
+			_func[cur] = [t2](GLuint stride, const VData::AttrA& attr) {
 				auto attrID = attr[t2.semID];
 				if(attrID < 0)
 					return;
 				glEnableVertexAttribArray(attrID);
+				GL_ACheckArg("%1%, %2%", t2.semID, attr[t2.semID])
 				glVertexAttribPointer(attrID, t2.elemSize, t2.elemFlag, t2.bNormalize, stride, (const GLvoid*)t2.offset);
 				GL_ACheck()
 			};
