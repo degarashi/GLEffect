@@ -66,14 +66,16 @@ namespace {
 	}
 }
 
-TestGL::TestGL(QWidget* parent) {
-
-}
-
-void TestGL::initializeGL() {
-	// OpenGL関数群を読み込む
-	LoadXGLFunc();
+TestGL::TestGL() {}
+void TestGL::initialize() {
+	std::cout	<< "OpenGL Version: " << ::glGetString(GL_VERSION) << std::endl
+				<< "OpenGL Vendor: " << ::glGetString(GL_VENDOR) << std::endl
+				<< "OpenGL Renderer: " << ::glGetString(GL_RENDERER) << std::endl
+				<< "GLSL Version: " << ::glGetString(GL_SHADING_LANGUAGE_VERSION) << std::endl
+				<< "Extensions: " << ::glGetString(GL_EXTENSIONS) << std::endl;
 	TestGLX();
 }
-void TestGL::resizeGL(int, int) {}
-void TestGL::paintGL() {}
+void TestGL::render() {
+	::glClearColor(0,0,1.0f, 1.0f);
+	::glClear(GL_COLOR_BUFFER_BIT);
+}

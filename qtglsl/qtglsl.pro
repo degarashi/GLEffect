@@ -4,7 +4,7 @@
 #
 #-------------------------------------------------
 
-QT       += core gui opengl
+QT       += core gui
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
@@ -20,7 +20,8 @@ SOURCES += main.cpp\
 	gltexture.cpp \
 	glx_output.cpp \
 	glx_parse.cpp \
-	glbuffer.cpp
+	glbuffer.cpp \
+	openglwindow.cpp
 
 HEADERS  += mainwindow.h \
 	glext.h \
@@ -34,6 +35,6 @@ HEADERS  += mainwindow.h \
 FORMS    += mainwindow.ui
 
 QMAKE_CXXFLAGS += -std=c++11 -Wno-sequence-point -Wno-unused-parameter -Wno-unused-variable
-QMAKE_CXX = 'g++-4.80 -DDEBUG'
+QMAKE_CXX = 'g++-4.80 -DDEBUG -g -O0'
 QMAKE_LINK = g++-4.80
-LIBS += -lGLU
+#LIBS += -lGLU

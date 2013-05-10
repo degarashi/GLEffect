@@ -3,14 +3,20 @@
 #include <QMessageBox>
 
 int main(int argc, char *argv[]) {
-	QApplication a(argc, argv);
-	MainWindow w;
-	TestGL* testGL = new TestGL();
-	w.setCentralWidget(testGL);
-	w.show();
+	QGuiApplication app(argc, argv);
+	QSurfaceFormat fmt;
+	fmt.setSamples(0);
+
+	TestGL testGL;
+	testGL.setFormat(fmt);
+	testGL.resize(640, 480);
+	testGL.setPosition(256,256);
+	testGL.create();
+	testGL.show();
+	testGL.setAnimating(true);
 
 	try {
-		return a.exec();
+		return app.exec();
 	} catch(const std::exception& e) {
 		QMessageBox box;
 		box.setWindowTitle("error");
