@@ -49,7 +49,7 @@ struct BoolSettingR {
 
 struct VData {
 	const static int MAX_STREAM = 4;
-	using SPBuffA = SPBuffer[MAX_STREAM];
+	using SPBuffA = SPVBuffer[MAX_STREAM];
 	using AttrA = GLint[static_cast<int>(VSem::NUM_SEMANTIC)];
 
 	const SPBuffA&	spBuff;
@@ -119,7 +119,7 @@ class TPStructR {
 		//! OpenGLに設定を適用
 		void applySetting() const;
 		//! 頂点ポインタを設定 (GLXから呼ぶ)
-		void setVertex(const SPVDecl& vdecl, const SPBuffer (&stream)[VData::MAX_STREAM]) const;
+		void setVertex(const SPVDecl& vdecl, const SPVBuffer (&stream)[VData::MAX_STREAM]) const;
 		//! 設定差分を求める
 		static TPStructR calcDiff(const TPStructR& from, const TPStructR& to);
 };
@@ -172,8 +172,8 @@ class GLEffect {
 
 	// --------------- 現在アクティブな設定 ---------------
 	SPVDecl			_spVDecl;
-	SPBuffer		_vBuffer[VData::MAX_STREAM],
-					_iBuffer;
+	SPVBuffer		_vBuffer[VData::MAX_STREAM];
+	SPIBuffer		_iBuffer;
 	using TPID = boost::optional<int>;
 	TPID			_idTech, _idTechCur,
 					_idPass, _idPassCur;
@@ -246,8 +246,8 @@ class GLEffect {
 		//! 頂点宣言
 		/*! \param[in] decl 頂点定義クラスのポインタ(定数を前提) */
 		void setVDecl(const SPVDecl& decl);
-		void setVStream(const SPBuffer& sp, int n);
-		void setIStream(const SPBuffer& sp);
+		void setVStream(const SPVBuffer& sp, int n);
+		void setIStream(const SPIBuffer& sp);
 		//! Tech指定
 		/*!	Techを切り替えるとUniformがデフォルトにリセットされる
 			切替時に引数としてUniMapを渡すとそれで初期化 */

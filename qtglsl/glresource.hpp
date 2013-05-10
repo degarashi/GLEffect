@@ -122,18 +122,16 @@ class GLBuffer : public IGLResource {
 	void _initBuffer();
 
 	public:
-		//! データの初期化無し
-		GLBuffer(GLuint flag, GLuint dtype, GLuint stride);
-		//! データをbuffで初期化
-		GLBuffer(GLuint flag, GLuint dtype, GLuint stride, ByteBuff&& buff);
-		GLBuffer(GLuint flag, GLuint dtype, GLuint stride, const void* src, size_t length);
-
+		GLBuffer(GLuint flag, GLuint dtype);
 		~GLBuffer() override;
 		void onDeviceLost() override;
 		void onDeviceReset() override;
 
-		void setBufferData(const void* src, size_t length);
-		void setBufferData(ByteBuff&& buff);
+		// 全域を書き換え
+		void initData(const void* src, size_t nElem, GLuint stride=0);
+		void initData(ByteBuff&& buff, GLuint stride=0);
+		// 部分的に書き換え
+		void updateData(const void* src, size_t nElem, GLuint offset);
 
 		GLuint getBuffID() const;
 		GLuint getBuffType() const;
@@ -143,6 +141,27 @@ class GLBuffer : public IGLResource {
 		void use() const;
 };
 using SPBuffer = std::shared_ptr<GLBuffer>;
+//! 頂点バッファ
+class GLVBuffer : public GLBuffer {
+	public:
+		GLVBuffer(GLuint dtype);
+};
+using SPVBuffer = std::shared_ptr<GLVBuffer>;
+
+using U16Buff = std::vector<uint16_t>;
+//! インデックスバッファ
+class GLIBuffer : public GLBuffer {
+	public:
+		GLIBuffer(GLuint dtype);
+		void initData(const GLubyte* src, size_t nElem);
+		void initData(const GLushort* src, size_t nElem);
+		void initData(ByteBuff&& buff);
+		void initData(const U16Buff& buff);
+
+		void updateData(const GLushort* src, size_t nElem, GLuint offset);
+		void updateData(const GLubyte* src, size_t nElem, GLuint offset);
+};
+using SPIBuffer = std::shared_ptr<GLIBuffer>;
 
 //! OpenGLエラーIDとその詳細メッセージ
 struct ErrID {

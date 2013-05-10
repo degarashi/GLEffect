@@ -132,8 +132,7 @@ void VDecl::apply(const VData& vdata) const {
 		auto& sp = vdata.spBuff[i];
 		// VStreamが設定されていればBindする
 		if(sp) {
-			glBindBuffer(GL_ARRAY_BUFFER, sp->getBuffID());
-			GL_ACheck()
+			sp->use();
 
 			GLuint stride = sp->getStride();
 			for(int j=_nEnt[i] ; j<_nEnt[i+1] ; j++)
@@ -282,11 +281,11 @@ void GLEffect::setVDecl(const SPVDecl& decl) {
 	_spVDecl = decl;
 	_rflg |= REFL_VSTREAM;
 }
-void GLEffect::setVStream(const SPBuffer& sp, int n) {
+void GLEffect::setVStream(const SPVBuffer& sp, int n) {
 	_vBuffer[n] = sp;
 	_rflg |= REFL_VSTREAM;
 }
-void GLEffect::setIStream(const SPBuffer& sp) {
+void GLEffect::setIStream(const SPIBuffer& sp) {
 	_iBuffer = sp;
 	_rflg |= REFL_ISTREAM;
 }
@@ -708,7 +707,7 @@ void TPStructR::applySetting() const {
 const UniMapID& TPStructR::getUniformDefault() const { return _defValue; }
 const UniEntryMap& TPStructR::getUniformEntries() const { return _noDefValue; }
 
-void TPStructR::setVertex(const SPVDecl& vdecl, const SPBuffer (&stream)[VData::MAX_STREAM]) const {
+void TPStructR::setVertex(const SPVDecl& vdecl, const SPVBuffer (&stream)[VData::MAX_STREAM]) const {
 	vdecl->apply(VData(stream, _vAttrID));
 }
 const SPProg& TPStructR::getProgram() const { return _prog; }
