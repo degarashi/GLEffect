@@ -30,7 +30,9 @@ HEADERS  += mainwindow.h \
 	glx.hpp \
 	dgmath.hpp \
 	glx_parse.hpp \
-	glx_macro.hpp
+	glx_macro.hpp \
+    testgl.hpp \
+    gldefine.hpp
 
 FORMS    += mainwindow.ui
 

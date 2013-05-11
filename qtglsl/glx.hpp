@@ -4,7 +4,7 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <boost/lexical_cast.hpp>
-#include "glresource.hpp"
+#include "gldefine.hpp"
 #include "glx_parse.hpp"
 #include "dgmath.hpp"
 
@@ -81,7 +81,6 @@ class VDecl {
 		//! OpenGLへ頂点位置を設定
 		void apply(const VData& vdata) const;
 };
-using SPVDecl = std::shared_ptr<VDecl>;
 
 using UniVal = boost::variant<bool, int, float, vec3, vec4, Mat23, SPTexture>;
 using UniMapStr = std::unordered_map<std::string, UniVal>;

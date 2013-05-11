@@ -7,6 +7,7 @@
 #include <sstream>
 #include <boost/format.hpp>
 #include "glhead.hpp"
+#include "gldefine.hpp"
 #define countof(elem) static_cast<int>(sizeof((elem))/sizeof((elem)[0]))
 
 //! Tech:Pass の組み合わせを表す
@@ -106,9 +107,7 @@ class GLShader : public IGLResource {
 		void onDeviceLost() override;
 		void onDeviceReset() override;
 };
-using SPShader = std::shared_ptr<GLShader>;
 
-using ByteBuff = std::vector<uint8_t>;
 //! OpenGLバッファクラス
 class GLBuffer : public IGLResource {
 	GLuint		_buffType,			//!< VERTEX_BUFFERなど
@@ -140,15 +139,12 @@ class GLBuffer : public IGLResource {
 
 		void use() const;
 };
-using SPBuffer = std::shared_ptr<GLBuffer>;
 //! 頂点バッファ
 class GLVBuffer : public GLBuffer {
 	public:
 		GLVBuffer(GLuint dtype);
 };
-using SPVBuffer = std::shared_ptr<GLVBuffer>;
 
-using U16Buff = std::vector<uint16_t>;
 //! インデックスバッファ
 class GLIBuffer : public GLBuffer {
 	public:
@@ -161,7 +157,6 @@ class GLIBuffer : public GLBuffer {
 		void updateData(const GLushort* src, size_t nElem, GLuint offset);
 		void updateData(const GLubyte* src, size_t nElem, GLuint offset);
 };
-using SPIBuffer = std::shared_ptr<GLIBuffer>;
 
 //! OpenGLエラーIDとその詳細メッセージ
 struct ErrID {
@@ -277,7 +272,6 @@ class GLProgram : public IGLResource {
 		GLuint getProgramID() const;
 		void use() const;
 };
-using SPProg = std::shared_ptr<GLProgram>;
 
 //! OpenGLテクスチャクラス
 class GLTexture : public IGLResource {
@@ -287,4 +281,3 @@ class GLTexture : public IGLResource {
 		GLuint getTextureID() const;
 		bool operator == (const GLTexture& t) const;
 };
-using SPTexture = std::shared_ptr<GLTexture>;

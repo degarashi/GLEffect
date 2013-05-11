@@ -1,4 +1,5 @@
 #include "mainwindow.h"
+#include "testgl.hpp"
 #include <QApplication>
 #include <QMessageBox>
 

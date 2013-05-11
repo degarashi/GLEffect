@@ -1,7 +1,8 @@
 #pragma once
 
-#include <memory>
 #include <QMainWindow>
+#include <QWindow>
+#include <memory>
 
 namespace Ui {
 	class MainWindow;
@@ -16,7 +17,6 @@ class MainWindow : public QMainWindow {
 		explicit MainWindow(QWidget* parent=nullptr);
 };
 
-#include <QWindow>
 class QOpenGLPaintDevice;
 class OpenGLWindow : public QWindow {
 	Q_OBJECT
@@ -44,11 +44,4 @@ class OpenGLWindow : public QWindow {
 		virtual void initialize();
 
 		void setAnimating(bool bAnim);
-};
-
-class TestGL : public OpenGLWindow {
-	public:
-		TestGL();
-		void initialize() override;
-		void render() override;
 };
