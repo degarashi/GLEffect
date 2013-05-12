@@ -1,13 +1,12 @@
 #include "glx_parse.hpp"
-
 #define DEF_ERR(r, msg) r.name(msg); qi::on_error<qi::fail>(r, err);
-GR_Glx::GR_Glx(): GR_Glx::base_type(rlGLX, "OpenGL_effect_parser") {
+
+void GR_Glx::_initRule0() {
 	using boost::phoenix::at_c;
 	using boost::phoenix::push_back;
 	using boost::phoenix::val;
 	using boost::phoenix::construct;
 	using boost::phoenix::insert;
-	using boost::phoenix::construct;
 
 	rlString %= lit('"') > +(standard::char_ - '"') > '"';
 	rlNameToken %= qi::lexeme[+(standard::alnum | standard::char_('_'))];
@@ -41,28 +40,14 @@ GR_Glx::GR_Glx(): GR_Glx::base_type(rlGLX, "OpenGL_effect_parser") {
 						'{' > (*rlUnifEnt) > '}';
 	rlConstBlock %= lit("const") > rlNameToken > -(':' > (rlNameToken % ',')) >
 						'{' > (*rlConstEnt) > '}';
-	rlArg %= GLType > rlNameToken;
-	rlShBlock = qi::no_case[GLShadertype][at_c<0>(_val)=_1] > rlNameToken[at_c<1>(_val)=_1] > '(' >
-					-(rlArg[push_back(at_c<2>(_val),_1)] > *(',' > rlArg[push_back(at_c<2>(_val),_1)])) > ')' >
-					lit('{') > (qi::lexeme[qi::as_string[*qi::lexeme[standard::char_ - '}']]])[at_c<3>(_val)=_1] > '}';
-	rlMacroBlock %= qi::no_case[lit("macro")] > '{' > *rlMacroEnt > '}';
-	rlPassBlock = lit("pass") > rlNameToken[at_c<0>(_val)=_1] > '{' >
-			*(rlBlockUse[push_back(at_c<1>(_val),_1)] | rlBoolSet[push_back(at_c<2>(_val),_1)] |
-			rlMacroBlock[at_c<3>(_val)=_1] | rlShSet[push_back(at_c<4>(_val), _1)] |
-			rlValueSet[push_back(at_c<6>(_val),_1)]) > '}';
-	rlTechBlock = lit("technique") > rlNameToken[at_c<0>(_val)=_1] > -(':' > (rlNameToken % ',')[at_c<7>(_val)=_1]) > '{' >
-			*(rlPassBlock[push_back(at_c<5>(_val),_1)] | rlBlockUse[push_back(at_c<1>(_val),_1)] | rlBoolSet[push_back(at_c<2>(_val),_1)] |
-			rlMacroBlock[at_c<3>(_val)=_1] | rlShSet[push_back(at_c<4>(_val), _1)] |
-			rlValueSet[push_back(at_c<6>(_val),_1)]) > '}';
-	rlGLX = *(rlComment | rlAttrBlock[insert(at_c<0>(_val), construct<std::pair<std::string,AttrStruct>>(at_c<0>(_1), _1))] |
-				rlConstBlock[insert(at_c<1>(_val), construct<std::pair<std::string,ConstStruct>>(at_c<0>(_1), _1))] |
-				rlShBlock[insert(at_c<2>(_val), construct<std::pair<std::string,ShStruct>>(at_c<1>(_1), _1))] |
-				rlTechBlock[push_back(at_c<3>(_val), _1)] |
-				rlUnifBlock[insert(at_c<4>(_val), construct<std::pair<std::string,UnifStruct>>(at_c<0>(_1), _1))] |
-				rlVaryBlock[insert(at_c<5>(_val), construct<std::pair<std::string,VaryStruct>>(at_c<0>(_1), _1))] );
-	rlCommentS = lit("//") > qi::lexeme[*(standard::char_ - qi::eol - qi::eoi) > (qi::eol | qi::eoi)];
-	rlCommentL = lit("/*") > qi::lexeme[*(standard::char_ - qi::lit("*/")) > qi::lit("*/")];
-	rlComment = rlCommentS | rlCommentL;
+}
+
+GR_Glx::GR_Glx(): GR_Glx::base_type(rlGLX, "OpenGL_effect_parser") {
+	_initRule0();
+	_initRule1();
+
+	using boost::phoenix::val;
+	using boost::phoenix::construct;
 
 	auto err = (std::cout << val("Error! Expectiong ")
 		<< _4 << val(" here: \"")

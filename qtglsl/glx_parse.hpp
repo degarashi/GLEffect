@@ -357,6 +357,9 @@ FUSION_ADAPT_STRUCT_AUTO(BlockUse, (type)(bAdd)(name))
 using Itr = std::string::const_iterator;
 //! GLX構文解析器
 struct GR_Glx : qi::grammar<Itr, GLXStruct(), standard::space_type> {
+	void _initRule0();
+	void _initRule1();
+
 	// GLX文法のEBNF記述
 	qi::rule<Itr, std::string(), standard::space_type> 			rlString,		//!< "で囲まれた文字列
 																rlNameToken;	//!< 文字列トークン

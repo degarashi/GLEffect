@@ -21,7 +21,8 @@ SOURCES += main.cpp\
 	glx_output.cpp \
 	glx_parse.cpp \
 	glbuffer.cpp \
-	openglwindow.cpp
+	openglwindow.cpp \
+	glx_parse2.cpp
 
 HEADERS  += mainwindow.h \
 	glext.h \
@@ -37,8 +38,8 @@ HEADERS  += mainwindow.h \
 
 FORMS    += mainwindow.ui
 
-#CONFIG += c++11
-QMAKE_CXXFLAGS += -std=c++11 -Wno-sequence-point -Wno-unused-parameter -Wno-unused-variable
+CONFIG += c++11
+QMAKE_CXXFLAGS += -Wno-sequence-point -Wno-unused-parameter -Wno-unused-variable
 QMAKE_CXX = 'g++-4.80 -DDEBUG'
 QMAKE_LINK = g++-4.80
 #LIBS += -lGLU
