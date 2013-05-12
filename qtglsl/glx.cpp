@@ -249,6 +249,9 @@ GLEffect::GLEffect(const std::string& fPath) {
 	auto itr = str.cbegin();
 	GLXStruct result;
 	bool bS = boost::spirit::qi::phrase_parse(itr, str.cend(), glx, standard::space, result);
+#ifdef DEBUG
+	// テスト表示
+	result.output(std::cout);
 	if(bS)
 		std::cout << "------- analysis succeeded! -------" << std::endl;
 	else
@@ -257,8 +260,9 @@ GLEffect::GLEffect(const std::string& fPath) {
 		std::cout << "<but not reached to end>" << std::endl
 			<< "remains: " << std::endl << std::string(itr, str.cend()) << std::endl;
 	}
-	// テスト表示
-	result.output(std::cout);
+#endif
+	if(!bS || itr!=str.cend())
+		throw EC_GLXGrammar("invalid GLEffect format");
 
 	// Tech/Passを順に実行形式へ変換
 	// (一緒にTech/Pass名リストを構築)
@@ -422,7 +426,7 @@ void GLEffect::_refreshIStream() {
 GLint GLEffect::getUniformID(const std::string& name) {
 	_refreshProgram();
 	GLint loc = glGetUniformLocation(_tps->getProgram()->getProgramID(), name.c_str());
-	GL_ACheckArg((boost::format("GLEffect::getUniformID(%1%)")%name).str())
+	GL_WarnArg((boost::format("GLEffect::getUniformID(%1%)")%name).str())
 	return loc;
 }
 void GLEffect::draw(GLenum mode, GLint first, GLsizei count) {
@@ -572,9 +576,10 @@ namespace {
 		GLint		uniID;
 		UniMapID	result;
 
-		void setKey(const std::string& key) {
+		bool setKey(const std::string& key) {
 			uniID = glGetUniformLocation(pgID, key.c_str());
-			GL_AWarn()
+			GL_WarnArg("Uniform argument \"%1%\" not found", key)
+			return uniID >= 0;
 		}
 		template <class T>
 		void _addResult(T&& t) {
@@ -683,8 +688,8 @@ TPStructR::TPStructR(const GLXStruct& gs, int tech, int pass) {
 	for(const auto* p : unifL) {
 		if(p->defStr) {
 			// 変数名をIDに変換
-			visitor.setKey(p->name);
-			boost::apply_visitor(visitor, *p->defStr);
+			if(visitor.setKey(p->name))
+				boost::apply_visitor(visitor, *p->defStr);
 		} else
 			_noDefValue.insert(p->name);
 	}

@@ -1,4 +1,5 @@
 #pragma once
+#include "dgassert.hpp"
 #include <cstdint>
 #include <stdexcept>
 #include <string>
@@ -169,42 +170,34 @@ struct ErrID {
 class GLDevice : public IGLResource {
 	const static ErrID cs_err[5];
 	public:
-		template <class FMT>
-		static FMT& Tmp(FMT& fmt) { return fmt; }
-		template <class FMT, class T, class... Ts>
-		static FMT& Tmp(FMT& fmt, const T& t, const Ts&... ts) {
-			fmt % t;
-			return Tmp(fmt, ts...);
-		}
-
 		static void output_Throw(const std::string& msg) {
 			throw GLE_Error(msg);
 		}
-		static void output_Print(const std::string& msg) {
-			std::cout << msg;
-		}
 
+		using CStr = const char*;
 		//! OpenGLのエラーに対して例外又は警告を出す
 		template <class OUTF, class... Ts>
-		static void checkError(OUTF outf, const char* file, const char* func, int line, const std::string& what, const Ts&... ts) {
+		static bool checkError(OUTF outf, CStr file, CStr func, int line, const std::string& info, const Ts&... ts) {
 			GLenum err;
+			bool ret = false;
 			while((err = glGetError()) != GL_NO_ERROR) {
+				// OpenGLエラー詳細を取得
+				std::string cause;
 				for(const auto& e : cs_err) {
 					if(e._id == err) {
-						using std::endl;
-						std::stringstream ss;
-						ss << "GLDevice check failed! (" << e._msg << ") at" << endl
-							<< "file=" << file << endl
-							<< "func=" << func << endl
-							<< "line=" << line << endl;
-						boost::format fmt(what);
-						ss << Tmp(fmt, ts...).str();
-
-						outf(ss.str());
+						cause = (boost::format("OpenGL CheckError(%1%)") % e._msg).str();
+						break;
 					}
 				}
-				outf("unknown OpenGL error!");
+				if(cause.empty())
+					cause.assign("OpenGL CheckError(unknown errorID)");
+				ret |= DGAssert::checkAssert(outf, cause.c_str(), file, func, line, info, ts...);
+				if(ret) {
+					resetError();
+					break;
+				}
 			}
+			return ret;
 		}
 		//! エラー値を出力しなくなるまでループする
 		static void resetError() {
@@ -213,9 +206,10 @@ class GLDevice : public IGLResource {
 };
 #ifdef DEBUG
 	// OpenGLに関するアサート集
-	#define GL_ACheckArg(...) GLDevice::checkError(GLDevice::output_Throw, __FILE__, __func__, __LINE__, __VA_ARGS__);
+	#define GL_ACheckArg(...) { static bool bIgnored = false; \
+		if(!bIgnored) { bIgnored = GLDevice::checkError(GLDevice::output_Throw, __FILE__, FUNCTIONNAME, __LINE__, __VA_ARGS__); } }
 	#define GL_ACheck() GL_ACheckArg("")
-	#define GL_AWarnArg(...) GLDevice::checkError(GLDevice::output_Print, __FILE__, __func__, __LINE__, __VA_ARGS__);
+	#define GL_AWarnArg(...) GLDevice::checkError(DGAssert::output_Print, __FILE__, FUNCTIONNAME, __LINE__, __VA_ARGS__));
 	#define GL_AWarn() GL_AWarnArg("")
 	#define GL_AResetError() GLDevice::resetError();
 #else
@@ -226,9 +220,9 @@ class GLDevice : public IGLResource {
 	#define GL_AResetError()
 #endif
 // Debug/Releaseに関係なくエラーチェックをしたい時用
-#define GL_CheckArg(...) GLDevice::checkError(GLDevice::output_Throw, __FILE__, __func__, __LINE__, __VA_ARGS__);
+#define GL_CheckArg(...) GLDevice::checkError(GLDevice::output_Throw, __FILE__, FUNCTIONNAME, __LINE__, __VA_ARGS__);
 #define GL_Check() GL_CheckArg("")
-#define GL_WarnArg(...) GLDevice::checkError(GLDevice::output_Print, __FILE__, __func__, __LINE__, __VA_ARGS__);
+#define GL_WarnArg(...) GLDevice::checkError(DGAssert::output_Print, __FILE__, FUNCTIONNAME, __LINE__, __VA_ARGS__);
 #define GL_Warn() GL_WarnArg("")
 #define GL_ResetError() GLDevice::resetError();
 

@@ -1,7 +1,7 @@
 #include "testgl.hpp"
 #include "glresource.hpp"
 #include "glx.hpp"
-
+#include <QMessageBox>
 TestGL::TestGL() {}
 void TestGL::initialize() {
 	_gle.reset(new GLEffect("test.glx"));

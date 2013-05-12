@@ -230,6 +230,8 @@ class GLEffect {
 		GLint getUniformID(const std::string& name);
 		template <class T>
 		void setUniform(const T& v, GLint id) {
+			if(id < 0)
+				return;
 			_rflg |= REFL_UNIFORM;
 			_uniMapID.insert(std::make_pair(id, v));
 		}

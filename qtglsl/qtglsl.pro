@@ -31,12 +31,14 @@ HEADERS  += mainwindow.h \
 	dgmath.hpp \
 	glx_parse.hpp \
 	glx_macro.hpp \
-    testgl.hpp \
-    gldefine.hpp
+	testgl.hpp \
+	gldefine.hpp \
+	dgassert.hpp
 
 FORMS    += mainwindow.ui
 
+#CONFIG += c++11
 QMAKE_CXXFLAGS += -std=c++11 -Wno-sequence-point -Wno-unused-parameter -Wno-unused-variable
-QMAKE_CXX = 'g++-4.80 -DDEBUG -g -O0'
+QMAKE_CXX = 'g++-4.80 -DDEBUG'
 QMAKE_LINK = g++-4.80
 #LIBS += -lGLU

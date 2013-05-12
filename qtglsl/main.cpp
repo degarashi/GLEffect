@@ -2,9 +2,10 @@
 #include "testgl.hpp"
 #include <QApplication>
 #include <QMessageBox>
+#include <QAbstractButton>
 
 int main(int argc, char *argv[]) {
-	QGuiApplication app(argc, argv);
+	QApplication app(argc, argv);
 	QSurfaceFormat fmt;
 	fmt.setSamples(0);
 
