@@ -1,5 +1,6 @@
 #pragma once
 #include <memory>
+#include <vector>
 
 class GLEffect;
 using SPEffect = std::shared_ptr<GLEffect>;

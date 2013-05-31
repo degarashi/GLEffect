@@ -10,20 +10,20 @@ void GR_Glx::_initRule0() {
 
 	rlString %= lit('"') > +(standard::char_ - '"') > '"';
 	rlNameToken %= qi::lexeme[+(standard::alnum | standard::char_('_'))];
-	rlBracket %= lit(_r1) > *(standard::char_ - lit(_r1) - lit(_r2)) > -(rlBracket(_r1,_r2)) > lit(_r2);
+	rlBracket %= lit(_r1) > qi::as_string[qi::lexeme[*(standard::char_ - lit(_r1) - lit(_r2))]] > -(rlBracket(_r1,_r2)) > lit(_r2);
 
-	rlAttrEnt = -(GLPrecision[at_c<0>(_val)=_1]) >> GLType[at_c<1>(_val)=_1] >> rlNameToken[at_c<2>(_val)=_1] >> ':' > GLSem[at_c<3>(_val)=_1] > ';';
+	rlAttrEnt = (-(GLPrecision[at_c<0>(_val)=_1]) >> GLType[at_c<1>(_val)=_1] >> rlNameToken[at_c<2>(_val)=_1] >> ':') > GLSem[at_c<3>(_val)=_1] > ';';
 	rlVaryEnt %= -(GLPrecision) >> GLType >> rlNameToken >> ';';
 
 	// (prec) valueType valueName<sizeSem> : defaultStr
-	// valueName<sizeSem> = defaultStr
-	rlUnifEnt = -(GLPrecision[at_c<0>(_val)=_1]) >> GLType[at_c<1>(_val)=_1] >> rlNameToken[at_c<2>(_val)=_1] >>
-				-('<' > rlNameToken[at_c<3>(_val)=_1] > '>') >>
-				-(lit('=') >> (rlVec | qi::float_ | qi::bool_)[at_c<4>(_val)=_1]) > ';';
+	// valueName<sizeSem> = defaultValue
+	rlUnifEnt = (-(GLPrecision[at_c<0>(_val)=_1]) >> GLType[at_c<1>(_val)=_1]) > rlNameToken[at_c<2>(_val)=_1] >
+				-('<' > rlNameToken[at_c<3>(_val)=_1] > '>') >
+				-(lit('=') > (rlVec | qi::float_ | qi::bool_)[at_c<4>(_val)=_1]) > ';';
 	rlVec %= '[' > +qi::float_ > ']';
 	rlMacroEnt %= rlNameToken > -('=' > rlNameToken) > ';';
-	rlConstEnt = -(GLPrecision[at_c<0>(_val)=_1]) >> GLType[at_c<1>(_val)=_1] >> rlNameToken[at_c<2>(_val)=_1] >>
-		  lit('=') >> (rlVec | qi::float_ | qi::bool_)[at_c<3>(_val)=_1] > ';';
+	rlConstEnt = (-(GLPrecision[at_c<0>(_val)=_1]) >> GLType[at_c<1>(_val)=_1] >> rlNameToken[at_c<2>(_val)=_1] >>
+		lit('=')) > (rlVec | qi::float_ | qi::bool_)[at_c<3>(_val)=_1] > ';';
 	rlBoolSet %= qi::no_case[GLBoolsetting] > '=' > qi::no_case[qi::bool_] > ';';
 	rlValueSet %= qi::no_case[GLSetting] > '=' >
 			qi::repeat(1,4)[qi::no_case[GLColormask] | qi::float_ | qi::bool_] > ';';
@@ -32,14 +32,14 @@ void GR_Glx::_initRule0() {
 		(-(rlVec|qi::bool_|qi::float_)[push_back(at_c<2>(_val), _1)] > *(lit(',') > (rlVec|qi::bool_|qi::float_)[push_back(at_c<2>(_val), _1)])) >
 		lit(");");
 
-	rlAttrBlock %= lit("attribute") > rlNameToken > -(':' > (rlNameToken % ',')) >
-						'{' > (*rlAttrEnt) > '}';
-	rlVaryBlock %= lit("varying") > rlNameToken > -(':' > (rlNameToken % ',')) >
-						'{' > (*rlVaryEnt) > '}';
-	rlUnifBlock %= lit("uniform") > rlNameToken > -(':' > (rlNameToken % ',')) >
-						'{' > (*rlUnifEnt) > '}';
-	rlConstBlock %= lit("const") > rlNameToken > -(':' > (rlNameToken % ',')) >
-						'{' > (*rlConstEnt) > '}';
+	rlAttrBlock = lit("attribute") > rlNameToken[at_c<0>(_val)=_1] > -(':' > (rlNameToken % ',')[at_c<1>(_val)=_1]) >
+						'{' > *(rlAttrEnt[push_back(at_c<2>(_val), _1)] | rlComment) > '}';
+	rlVaryBlock = lit("varying") > rlNameToken[at_c<0>(_val)=_1] > -(':' > (rlNameToken % ',')[at_c<1>(_val)=_1]) >
+						'{' > *(rlVaryEnt[push_back(at_c<2>(_val), _1)] | rlComment) > '}';
+	rlUnifBlock = lit("uniform") > rlNameToken[at_c<0>(_val)=_1] > -(':' > (rlNameToken % ',')[at_c<1>(_val)=_1]) >
+						'{' > *(rlUnifEnt[push_back(at_c<2>(_val), _1)] | rlComment) > '}';
+	rlConstBlock = lit("const") > rlNameToken[at_c<0>(_val)=_1] > -(':' > (rlNameToken % ',')[at_c<1>(_val)=_1]) >
+						'{' > *(rlConstEnt[push_back(at_c<2>(_val), _1)] | rlComment) > '}';
 }
 
 GR_Glx::GR_Glx(): GR_Glx::base_type(rlGLX, "OpenGL_effect_parser") {

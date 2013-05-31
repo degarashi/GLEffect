@@ -1,5 +1,6 @@
 #include "mainwindow.h"
 #include "testgl.hpp"
+#include "dgassert.hpp"
 #include <QApplication>
 #include <QMessageBox>
 #include <QAbstractButton>

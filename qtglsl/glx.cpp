@@ -1,3 +1,4 @@
+#define BOOST_PP_VARIADICS 1
 #include "glx.hpp"
 #include <boost/format.hpp>
 #include <fstream>
@@ -386,7 +387,7 @@ namespace {
 			Mat33 m3 = m.toMat33();
 			glUniformMatrix3fv(_id, 9, true, m3.m);
 		}
-		void operator()(const SPTexture& t) const {}
+		void operator()(const SPTexture&) const {}
 	};
 }
 void GLEffect::_refreshUniform() {
@@ -479,7 +480,7 @@ namespace {
 			}
 
 			template <class ST, class ENT>
-			std::vector<const ENT*> exportEntries(int blockID, const std::map<std::string,ST> (GLXStruct::*mfunc)) const {
+			std::vector<const ENT*> exportEntries(uint32_t blockID, const std::map<std::string,ST> (GLXStruct::*mfunc)) const {
 				// 使用されるAttributeブロックを収集
 				std::vector<const ST*> tmp, tmp2;
 				// 配列末尾から処理をする

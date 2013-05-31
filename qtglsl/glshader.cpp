@@ -13,7 +13,7 @@
 	}
 #undef GLDEFINE
 
-GLE_ShProgBase::GLE_ShProgBase(GLGetIV ivF, GLInfoFunc infoF, const std::string& aux, GLuint id): GLE_Error("") {
+GLE_ShProgBase::GLE_ShProgBase(GLGetIV ivF, GLInfoFunc, const std::string& aux, GLuint id): GLE_Error("") {
 	int logSize, length;
 	ivF(id, GL_INFO_LOG_LENGTH, &logSize);
 

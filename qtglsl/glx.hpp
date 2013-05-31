@@ -1,12 +1,12 @@
 #pragma once
-
+#define BOOST_PP_VARIADICS 1
+#include "gldefine.hpp"
+#include "glx_parse.hpp"
+#include "dgmath.hpp"
 #include <functional>
 #include <unordered_map>
 #include <unordered_set>
 #include <boost/lexical_cast.hpp>
-#include "gldefine.hpp"
-#include "glx_parse.hpp"
-#include "dgmath.hpp"
 
 //! OpenGLの値設定関数代理クラス
 struct ValueSettingR;
@@ -265,9 +265,3 @@ class GLEffect {
 		//! IStreamを使わず描画
 		void draw(GLenum mode, GLint first, GLsizei count);
 };
-namespace std {
-	template <>
-	inline void swap(TPStructR& t0, TPStructR& t1) noexcept {
-		t0.swap(t1);
-	}
-}

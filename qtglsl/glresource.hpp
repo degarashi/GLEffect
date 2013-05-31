@@ -1,5 +1,8 @@
 #pragma once
+#define BOOST_PP_VARIADICS 1
 #include "dgassert.hpp"
+#include "glhead.hpp"
+#include "gldefine.hpp"
 #include <cstdint>
 #include <stdexcept>
 #include <string>
@@ -7,8 +10,7 @@
 #include <vector>
 #include <sstream>
 #include <boost/format.hpp>
-#include "glhead.hpp"
-#include "gldefine.hpp"
+
 #define countof(elem) static_cast<int>(sizeof((elem))/sizeof((elem)[0]))
 
 //! Tech:Pass の組み合わせを表す
@@ -240,7 +242,7 @@ class GLProgram : public IGLResource {
 	SPShader	_shader[ShType::NUM_SHTYPE];
 	GLuint		_idProg;
 
-	void _setShader(int n) {}
+	void _setShader(int) {}
 	template <class... Ts>
 	void _setShader(int n, const SPShader& sp0, const Ts&... sp) {
 		_shader[n] = sp0;

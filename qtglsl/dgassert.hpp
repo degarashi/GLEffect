@@ -1,4 +1,5 @@
 #pragma once
+#define BOOST_PP_VARIADICS 1
 #include <QMessageBox>
 #include <iostream>
 #include <sstream>
@@ -30,7 +31,7 @@ struct DGAssert {
 			<< "func=" << func << endl
 			<< "line=" << line << endl;
 		boost::format fmt(info);
-		ss << Tmp(fmt, ts...).str();
+		ss << Tmp(fmt, ts...).str() << endl;
 		return ss.str();
 	}
 

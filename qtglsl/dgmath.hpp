@@ -1,6 +1,7 @@
 #pragma once
 #define BOOST_PP_VARIADICS 1
 #include <boost/preprocessor.hpp>
+#include <initializer_list>
 
 #define SEQ_VECTOR (x)(y)(z)(w)
 #define DEF_VEC(n) \
@@ -11,6 +12,12 @@ union { \
 	}; \
 	float value[n]; \
 }; \
+vec##n() = default; \
+vec##n(std::initializer_list<float> il) { assert(il.size() == n); \
+	auto* mp = value; \
+	for(auto itr=il.begin() ; itr!=il.end() ; itr++) \
+		*mp++ = *itr; \
+} \
 bool operator == (const vec##n& v) const { \
 	for(int i=0 ; i<countof(value) ; i++) \
 		if(value[i] != v.value[i]) \
@@ -24,6 +31,14 @@ DEF_VEC(3)
 
 struct Mat33 {
 	float m[3*3];
+	Mat33() = default;
+	Mat33(std::initializer_list<float> il) {
+		assert(il.size() == countof(m));
+		auto* mp = m;
+		for(auto itr=il.begin() ; itr!=il.end() ; itr++)
+			*mp++ = *itr;
+	}
+
 	bool operator == (const Mat33& tm) const {
 		for(int i=0 ; i<countof(m) ; i++) {
 			if(m[i] != tm.m[i])
@@ -34,6 +49,15 @@ struct Mat33 {
 };
 struct Mat23 {
 	float m[3*2];
+
+	Mat23() = default;
+	Mat23(std::initializer_list<float> il) {
+		assert(il.size() == countof(m));
+		auto* mp = m;
+		for(auto itr=il.begin() ; itr!=il.end() ; itr++)
+			*mp++ = *itr;
+	}
+
 	bool operator == (const Mat23& tm) const {
 		for(int i=0 ; i<countof(m) ; i++) {
 			if(m[i] != tm.m[i])

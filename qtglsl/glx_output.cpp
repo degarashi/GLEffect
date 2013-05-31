@@ -137,10 +137,10 @@ void ShSetting::output(std::ostream& os) const {
 	}
 	std::cout << std::endl;
 }
-void TPStruct::output(std::ostream& os) const {
+void TPStruct::output(std::ostream&) const {
 	BOOST_PP_SEQ_FOR_EACH(PRINTIT, _, SEQ_TPS)
 }
-void GLXStruct::output(std::ostream& os) const {
+void GLXStruct::output(std::ostream&) const {
 	BOOST_PP_SEQ_FOR_EACH(PRINTITM, _, SEQ_GLX)
 	for(auto& a : tpL)
 		PrintIt("Tech: ", a);
