@@ -124,9 +124,8 @@ VDecl::VDecl(std::initializer_list<VDInfo> il) {
 				glVertexAttribPointer(attrID, t2.elemSize, t2.elemFlag, t2.bNormalize, stride, (const GLvoid*)t2.offset);
 				GL_ACheck()
 			};
+			++cur;
 		}
-
-		++cur;
 	}
 	_nEnt[VData::MAX_STREAM] = _nEnt[VData::MAX_STREAM-1];
 }

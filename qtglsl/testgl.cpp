@@ -36,26 +36,25 @@ void TestGL::initialize() {
 	};
 	TmpV tmpV[] = {
 		{
-			{-1,-1,-1},
+			{-1,-1,0},
 			{0,0,0,0}
 		},
 		{
-			{-1,1,-1},
+			{-1,1,0},
 			{0,1,0,0}
 		},
 		{
-			{1,1,-1},
+			{1,1,0},
 			{1,1,0,0}
 		},
 		{
-			{1,-1,-1},
+			{1,-1,0},
 			{1,0,0,0}
 		}
 	};
 
 	_vbo.reset(new GLVBuffer(GL_STATIC_DRAW));
 	_vbo->initData(tmpV, countof(tmpV), sizeof(TmpV));
-	_gle->setVStream(_vbo, 0);
 
 	// インデックス定義
 	GLubyte tmpI[] = {
@@ -64,13 +63,15 @@ void TestGL::initialize() {
 	};
 	_ibo.reset(new GLIBuffer(GL_STATIC_DRAW));
 	_ibo->initData(tmpI, countof(tmpI));
-	_gle->setIStream(_ibo);
-
-	_gle->drawIndexed(GL_TRIANGLES, 6, 0);
-// 	_gle.saveParams();
-// 	_gle.restoreParams();
 }
 void TestGL::render() {
 	glClearColor(0,0,1.0f, 1.0f);
-	glClear(GL_COLOR_BUFFER_BIT);
+	glClearDepth(1.0f);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	glViewport(0,0,640,480);
+
+	_gle->setVStream(_vbo, 0);
+	_gle->setIStream(_ibo);
+	_gle->drawIndexed(GL_TRIANGLES, 6, 0);
+	GL_ACheck()
 }

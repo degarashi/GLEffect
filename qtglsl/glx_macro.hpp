@@ -7,7 +7,7 @@
 #define SEQ_PRECISION (highp)(mediump)(lowp)
 #define SEQ_INOUT (in)(out)(inout)
 #define SEQ_BLOCK (attribute)(varying)(uniform)(const)
-// 本当はint引数な所をfloatで統一
+
 #define SEQ_GLSETTING ((linewidth,glLineWidth,float))((frontface,glFrontFace,float))((cullface,glCullFace,float))((depthrange,glDepthRange,float,float))((viewport,glViewport,float,float,float,float))\
 		((scissor,glScissor,float,float,float,float))((samplecoverage,glSampleCoverage,float,bool))((stencilfunc,glStencilFunc,float,float,float))((stencilfuncfront,StencilFuncFront,float,float,float))\
 		((stencilfuncback,StencilFuncBack,float,float,float))((stencilop,glStencilOp,float,float,float))((stencilopfront,StencilOpFront,float,float,float))((stencilopback,StencilOpBack,float,float,float))\
