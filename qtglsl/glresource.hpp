@@ -172,14 +172,16 @@ struct ErrID {
 class GLDevice : public IGLResource {
 	const static ErrID cs_err[5];
 	public:
-		static void output_Throw(const std::string& msg) {
-			throw GLE_Error(msg);
-		}
+		static struct _Policy_Critical : DGAssert::_Policy_Critical {
+			void onOutput(const std::string& msg) const override {
+				throw GLE_Error(msg);
+			}
+		} Policy_Critical;
 
 		using CStr = const char*;
 		//! OpenGLのエラーに対して例外又は警告を出す
-		template <class OUTF, class... Ts>
-		static bool checkError(OUTF outf, CStr file, CStr func, int line, const std::string& info, const Ts&... ts) {
+		template <class... Ts>
+		static bool checkError(DGAssert::IPolicy* policy, CStr file, CStr func, int line, const std::string& info, const Ts&... ts) {
 			GLenum err;
 			bool ret = false;
 			while((err = glGetError()) != GL_NO_ERROR) {
@@ -193,7 +195,7 @@ class GLDevice : public IGLResource {
 				}
 				if(cause.empty())
 					cause.assign("OpenGL CheckError(unknown errorID)");
-				ret |= DGAssert::checkAssert(outf, cause.c_str(), file, func, line, info, ts...);
+				ret |= DGAssert::checkAssert(policy, cause.c_str(), file, func, line, info, ts...);
 				if(ret) {
 					resetError();
 					break;
@@ -209,9 +211,9 @@ class GLDevice : public IGLResource {
 #ifdef DEBUG
 	// OpenGLに関するアサート集
 	#define GL_ACheckArg(...) { static bool bIgnored = false; \
-		if(!bIgnored) { bIgnored = GLDevice::checkError(GLDevice::output_Throw, __FILE__, FUNCTIONNAME, __LINE__, __VA_ARGS__); } }
+		if(!bIgnored) { bIgnored = GLDevice::checkError(&GLDevice::Policy_Critical, __FILE__, FUNCTIONNAME, __LINE__, __VA_ARGS__); } }
 	#define GL_ACheck() GL_ACheckArg("")
-	#define GL_AWarnArg(...) GLDevice::checkError(DGAssert::output_Print, __FILE__, FUNCTIONNAME, __LINE__, __VA_ARGS__));
+	#define GL_AWarnArg(...) GLDevice::checkError(&DGAssert::Policy_Warning, __FILE__, FUNCTIONNAME, __LINE__, __VA_ARGS__));
 	#define GL_AWarn() GL_AWarnArg("")
 	#define GL_AResetError() GLDevice::resetError();
 #else
@@ -222,9 +224,9 @@ class GLDevice : public IGLResource {
 	#define GL_AResetError()
 #endif
 // Debug/Releaseに関係なくエラーチェックをしたい時用
-#define GL_CheckArg(...) GLDevice::checkError(GLDevice::output_Throw, __FILE__, FUNCTIONNAME, __LINE__, __VA_ARGS__);
+#define GL_CheckArg(...) GLDevice::checkError(&GLDevice::Policy_Critical, __FILE__, FUNCTIONNAME, __LINE__, __VA_ARGS__);
 #define GL_Check() GL_CheckArg("")
-#define GL_WarnArg(...) GLDevice::checkError(DGAssert::output_Print, __FILE__, FUNCTIONNAME, __LINE__, __VA_ARGS__);
+#define GL_WarnArg(...) GLDevice::checkError(&DGAssert::Policy_Warning, __FILE__, FUNCTIONNAME, __LINE__, __VA_ARGS__);
 #define GL_Warn() GL_WarnArg("")
 #define GL_ResetError() GLDevice::resetError();
 
