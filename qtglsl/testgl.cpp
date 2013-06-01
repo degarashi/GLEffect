@@ -1,6 +1,7 @@
 #include "testgl.hpp"
 #include "glresource.hpp"
 #include "glx.hpp"
+#include "vector.hpp"
 #include <QMessageBox>
 
 TestGL::TestGL() {}
@@ -26,12 +27,12 @@ void TestGL::initialize() {
 	});
 	_gle->setVDecl(decl);
 	GL_ACheck()
-	_gle->setUniform(vec4{1,2,3,4}, _gle->getUniformID("lowVal"));
+	_gle->setUniform(spn::Vec4{1,2,3,4}, _gle->getUniformID("lowVal"));
 
 	// 頂点定義
 	struct TmpV {
-		vec3 pos;
-		vec4 tex;
+		spn::Vec3 pos;
+		spn::Vec4 tex;
 	};
 	TmpV tmpV[] = {
 		{

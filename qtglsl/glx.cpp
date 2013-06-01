@@ -1,5 +1,6 @@
 #define BOOST_PP_VARIADICS 1
 #include "glx.hpp"
+#include "matrix.hpp"
 #include <boost/format.hpp>
 #include <fstream>
 
@@ -381,11 +382,11 @@ namespace {
 		void operator()(bool b) const { glUniform1i(_id, b ? 0 : 1); }
 		void operator()(int v) const { glUniform1i(_id, v); }
 		void operator()(float v) const { glUniform1f(_id, v); }
-		void operator()(const vec3& v) const { glUniform3f(_id, v.x, v.y, v.z); }
-		void operator()(const vec4& v) const { glUniform4f(_id, v.x, v.y, v.z, v.w);}
-		void operator()(const Mat23& m) const {
-			Mat33 m3 = m.toMat33();
-			glUniformMatrix3fv(_id, 9, true, m3.m);
+		void operator()(const spn::Vec3& v) const { glUniform3fv(_id, 1, v.m); }
+		void operator()(const spn::Vec4& v) const { glUniform4fv(_id, 1, v.m);}
+		void operator()(const spn::Mat32& m) const {
+			auto m3 = m.convertA33();
+			glUniformMatrix3fv(_id, 1, true, reinterpret_cast<const GLfloat*>(m3.ma));
 		}
 		void operator()(const SPTexture&) const {}
 	};
@@ -590,9 +591,9 @@ namespace {
 
 		void operator()(const std::vector<float>& v) {
 			if(v.size() == 3)
-				_addResult(vec3{v[0],v[1],v[2]});
+				_addResult(spn::Vec3{v[0],v[1],v[2]});
 			else
-				_addResult(vec4{v[0],v[1],v[2],v[3]});
+				_addResult(spn::Vec4{v[0],v[1],v[2],v[3]});
 		}
 		template <class T>
 		void operator()(const T& v) {

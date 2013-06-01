@@ -2,7 +2,7 @@
 #define BOOST_PP_VARIADICS 1
 #include "gldefine.hpp"
 #include "glx_parse.hpp"
-#include "dgmath.hpp"
+#include "matrix.hpp"
 #include <functional>
 #include <unordered_map>
 #include <unordered_set>
@@ -82,7 +82,7 @@ class VDecl {
 		void apply(const VData& vdata) const;
 };
 
-using UniVal = boost::variant<bool, int, float, vec3, vec4, Mat23, SPTexture>;
+using UniVal = boost::variant<bool, int, float, spn::Vec3, spn::Vec4, spn::Mat32, SPTexture>;
 using UniMapStr = std::unordered_map<std::string, UniVal>;
 using UniMapID = std::unordered_map<GLint, UniVal>;
 using UniEntryMap = std::unordered_set<std::string>;

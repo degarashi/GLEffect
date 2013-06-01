@@ -30,11 +30,13 @@ HEADERS  += mainwindow.h \
 	glresource.hpp \
 	glhead.hpp \
 	glx.hpp \
-	dgmath.hpp \
 	glx_parse.hpp \
 	glx_macro.hpp \
 	testgl.hpp \
 	gldefine.hpp \
+	dgassert.hpp \
+	../../../projects/dgmath/vector.hpp \
+	../../../projects/dgmath/matrix.hpp
 
 FORMS    += mainwindow.ui
 
@@ -42,4 +44,6 @@ CONFIG += c++11
 QMAKE_CXXFLAGS_DEBUG += -Wno-sequence-point -Wno-unused-parameter -Wno-unused-variable
 QMAKE_CXX = 'clang++ -DDEBUG'
 QMAKE_LINK = clang++
-LIBS += -lGLU
+LIBS += -lGLU -lspinner
+QMAKE_LIBDIR += /home/slice/projects/dgmath/build/
+QMAKE_INCDIR += /home/slice/projects/dgmath/
