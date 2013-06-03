@@ -1,7 +1,7 @@
 #include "testgl.hpp"
 #include "glresource.hpp"
 #include "glx.hpp"
-#include "vector.hpp"
+#include "matrix.hpp"
 #include <QMessageBox>
 
 TestGL::TestGL() {}
@@ -68,7 +68,18 @@ void TestGL::render() {
 	glClearColor(0,0,1.0f, 1.0f);
 	glClearDepth(1.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	glViewport(0,0,640,480);
+	int w = width(),
+		h = height();
+	glViewport(0,0,w,h);
+	if(!_vbo)
+		return;
+
+	static float angle = 0;
+	spn::Mat44 m4 = spn::Mat44::RotationZ(spn::DEGtoRAD(angle));
+	m4 *= spn::Mat44::PerspectiveFovLH(spn::DEGtoRAD(90), float(w)/h, 0.01f, 100.0f);
+	GLint id = _gle->getUniformID("testMat");
+	_gle->setUniform(m4, id);
+	angle += 1.0f;
 
 	_gle->setVStream(_vbo, 0);
 	_gle->setIStream(_ibo);
