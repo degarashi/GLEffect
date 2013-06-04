@@ -159,45 +159,49 @@ namespace Bit {
 
 //! GLXエフェクト管理クラス
 class GLEffect {
-	using UseArray = std::vector<std::string>;
-	//! アクティブなBoolSetting, ValueSettingを適用
-	void _applyShaderSetting() const;
+	public:
+		using TexIndex = std::unordered_map<GLint, GLint>;
+	private:
+		using UseArray = std::vector<std::string>;
+		//! アクティブなBoolSetting, ValueSettingを適用
+		void _applyShaderSetting() const;
 
-	using TechMap = std::unordered_map<GL16ID, TPStructR>;
-	using DiffCache = std::unordered_map<GLDiffID, int>;
-	using TechName = std::vector<std::vector<std::string>>;
+		using TechMap = std::unordered_map<GL16ID, TPStructR>;
+		using DiffCache = std::unordered_map<GLDiffID, int>;
+		using TechName = std::vector<std::vector<std::string>>;
 
-	TechMap			_techMap;		//!< ゼロから設定を構築する場合の情報や頂点セマンティクス
-	DiffCache		_diffCache;		//!< セッティング差分を格納
-	TechName		_techName;		//!< Tech名とPass名のセット
+		TechMap			_techMap;		//!< ゼロから設定を構築する場合の情報や頂点セマンティクス
+		DiffCache		_diffCache;		//!< セッティング差分を格納
+		TechName		_techName;		//!< Tech名とPass名のセット
 
-	// --------------- 現在アクティブな設定 ---------------
-	SPVDecl			_spVDecl;
-	SPVBuffer		_vBuffer[VData::MAX_STREAM];
-	SPIBuffer		_iBuffer;
-	using TPID = boost::optional<int>;
-	TPID			_idTech, _idTechCur,
-					_idPass, _idPassCur;
-	bool			_bDefaultParam;	//!< Tech切替時、trueならデフォルト値読み込み
-	UniMapID		_uniMapID,		//!< 設定待ちのエントリ
-					_uniMapIDTmp;	//!< 設定し終わったエントリ
-	using TPRef = boost::optional<const TPStructR&>;
-	TPRef			_tps;
+		// --------------- 現在アクティブな設定 ---------------
+		SPVDecl			_spVDecl;
+		SPVBuffer		_vBuffer[VData::MAX_STREAM];
+		SPIBuffer		_iBuffer;
+		using TPID = boost::optional<int>;
+		TPID			_idTech, _idTechCur,
+						_idPass, _idPassCur;
+		bool			_bDefaultParam;	//!< Tech切替時、trueならデフォルト値読み込み
+		UniMapID		_uniMapID,		//!< 設定待ちのエントリ
+						_uniMapIDTmp;	//!< 設定し終わったエントリ
+		using TPRef = boost::optional<const TPStructR&>;
+		TPRef			_tps;
+		TexIndex		_texIndex;		//!< [AttrID : TextureIndex]
 
-	enum REFLAG {
-		REFL_PROGRAM = 0x01,		//!< シェーダーのUse宣言
-		REFL_UNIFORM = 0x02,		//!< キャッシュしたUniform値の設定
-		REFL_VSTREAM = 0x04,		//!< VStreamの設定
-		REFL_ISTREAM = 0x08,		//!< IStreamの設定
-		REFL_ALL = 0x0f
-	};
-	uint32_t		_rflg = REFL_ALL;
+		enum REFLAG {
+			REFL_PROGRAM = 0x01,		//!< シェーダーのUse宣言
+			REFL_UNIFORM = 0x02,		//!< キャッシュしたUniform値の設定
+			REFL_VSTREAM = 0x04,		//!< VStreamの設定
+			REFL_ISTREAM = 0x08,		//!< IStreamの設定
+			REFL_ALL = 0x0f
+		};
+		uint32_t		_rflg = REFL_ALL;
 
-	// ----- リフレッシュ関数 -----
-	void _refreshProgram();
-	void _refreshUniform();
-	void _refreshVStream();
-	void _refreshIStream();
+		// ----- リフレッシュ関数 -----
+		void _refreshProgram();
+		void _refreshUniform();
+		void _refreshVStream();
+		void _refreshIStream();
 
 	public:
 		//! Effectファイル(gfx)を読み込む

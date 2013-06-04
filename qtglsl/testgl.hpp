@@ -7,6 +7,7 @@ class TestGL : public OpenGLWindow {
 	SPEffect	_gle;
 	SPVBuffer	_vbo;
 	SPIBuffer	_ibo;
+	SPTexture	_tex;
 
 	public:
 		TestGL();

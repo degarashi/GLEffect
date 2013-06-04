@@ -371,12 +371,33 @@ void GLEffect::_refreshProgram() {
 		_tps = tps;
 		_idTechCur = _idTech;
 		_idPassCur = _idPass;
+
+		// テクスチャインデックスリスト作成
+		_texIndex.clear();
+		GLuint pid = tps.getProgram()->getProgramID();
+		GLint nUnif;
+		glGetProgramiv(pid, GL_ACTIVE_UNIFORMS, &nUnif);
+
+		GLsizei len;
+		int size;
+		GLenum typ;
+		GLchar cbuff[0];
+		// Sampler2D変数が見つかった順にテクスチャIDを割り振る
+		GLint cur = 0;
+		for(GLint i=0 ; i<nUnif ; i++) {
+			glGetActiveUniform(pid, i, 0, &len, &size, &typ, cbuff);
+			GL_ACheck()
+			if(typ == GL_SAMPLER_2D)
+				_texIndex.insert(std::make_pair(i, cur++));
+		}
 	}
 }
 namespace {
 	struct UniVisitor : boost::static_visitor<> {
-		GLint		_id;
+		GLint						_id;
+		const GLEffect::TexIndex&	_tIdx;
 
+		UniVisitor(const GLEffect::TexIndex& ti): _tIdx(ti) {}
 		void setID(GLint id) { _id = id; }
 		void operator()(bool b) const { glUniform1i(_id, b ? 0 : 1); }
 		void operator()(int v) const { glUniform1i(_id, v); }
@@ -401,7 +422,15 @@ namespace {
 		void operator()(const spn::Mat44& m) const {
 			glUniformMatrix4fv(_id, 1, true, reinterpret_cast<const GLfloat*>(m.ma));
 		}
-		void operator()(const SPTexture&) const {}
+		void operator()(const SPTexture& tex) const {
+			auto itr = _tIdx.find(_id);
+			if(itr != _tIdx.end()) {
+				tex->use(itr->second);
+				glUniform1i(_id, itr->second);
+				GL_Warn()
+			} else
+				WarnArg(false, "uniform id=%1% is not sampler", _id)
+		}
 	};
 }
 void GLEffect::_refreshUniform() {
@@ -410,7 +439,7 @@ void GLEffect::_refreshUniform() {
 		_refreshProgram();
 		if(!_uniMapID.empty()) {
 			// UnifParamの変数をシェーダーに設定
-			UniVisitor visitor;
+			UniVisitor visitor(_texIndex);
 			for(auto itr=_uniMapID.begin() ; itr!=_uniMapID.end() ; itr++) {
 				visitor.setID(itr->first);
 				boost::apply_visitor(visitor, itr->second);
@@ -441,7 +470,8 @@ void GLEffect::_refreshIStream() {
 GLint GLEffect::getUniformID(const std::string& name) {
 	_refreshProgram();
 	GLint loc = glGetUniformLocation(_tps->getProgram()->getProgramID(), name.c_str());
-	GL_WarnArg((boost::format("GLEffect::getUniformID(%1%)")%name).str())
+	GL_ACheck()
+	WarnArg(loc>=0, "Uniform argument \"%1%\" not found", name)
 	return loc;
 }
 void GLEffect::draw(GLenum mode, GLint first, GLsizei count) {
@@ -593,7 +623,8 @@ namespace {
 
 		bool setKey(const std::string& key) {
 			uniID = glGetUniformLocation(pgID, key.c_str());
-			GL_WarnArg("Uniform argument \"%1%\" not found", key)
+			GL_ACheck()
+			WarnArg(uniID>=0, "Uniform argument \"%1%\" not found", key)
 			return uniID >= 0;
 		}
 		template <class T>
@@ -700,6 +731,7 @@ TPStructR::TPStructR(const GLXStruct& gs, int tech, int pass) {
 
 	// Uniform変数にデフォルト値がセットしてある物をリストアップ
 	Visitor visitor;
+	visitor.pgID = _prog->getProgramID();
 	for(const auto* p : unifL) {
 		if(p->defStr) {
 			// 変数名をIDに変換

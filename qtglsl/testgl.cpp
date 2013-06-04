@@ -1,8 +1,11 @@
+#include <QMessageBox>
+#include <QApplication>
+#include <QDir>
+
 #include "testgl.hpp"
 #include "glresource.hpp"
 #include "glx.hpp"
 #include "matrix.hpp"
-#include <QMessageBox>
 
 TestGL::TestGL() {}
 void TestGL::initialize() {
@@ -37,22 +40,21 @@ void TestGL::initialize() {
 	TmpV tmpV[] = {
 		{
 			{-1,-1,0},
-			{0,0,0,0}
-		},
-		{
-			{-1,1,0},
 			{0,1,0,0}
 		},
 		{
+			{-1,1,0},
+			{0,0,0,0}
+		},
+		{
 			{1,1,0},
-			{1,1,0,0}
+			{1,0,0,0}
 		},
 		{
 			{1,-1,0},
-			{1,0,0,0}
+			{1,1,0,0}
 		}
 	};
-
 	_vbo.reset(new GLVBuffer(GL_STATIC_DRAW));
 	_vbo->initData(tmpV, countof(tmpV), sizeof(TmpV));
 
@@ -63,6 +65,9 @@ void TestGL::initialize() {
 	};
 	_ibo.reset(new GLIBuffer(GL_STATIC_DRAW));
 	_ibo->initData(tmpI, countof(tmpI));
+
+	// テクスチャ読み込み
+	_tex.reset(new TexFile("sample.png"));
 }
 void TestGL::render() {
 	glClearColor(0,0,1.0f, 1.0f);
@@ -77,8 +82,10 @@ void TestGL::render() {
 	static float angle = 0;
 	spn::Mat44 m4 = spn::Mat44::RotationZ(spn::DEGtoRAD(angle));
 	m4 *= spn::Mat44::PerspectiveFovLH(spn::DEGtoRAD(90), float(w)/h, 0.01f, 100.0f);
-	GLint id = _gle->getUniformID("testMat");
+	GLint id = _gle->getUniformID("mTrans");
 	_gle->setUniform(m4, id);
+	id = _gle->getUniformID("tDiffuse");
+	_gle->setUniform(_tex, id);
 	angle += 1.0f;
 
 	_gle->setVStream(_vbo, 0);

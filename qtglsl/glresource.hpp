@@ -10,6 +10,7 @@
 #include <vector>
 #include <sstream>
 #include <boost/format.hpp>
+#include <QImage>
 
 #define countof(elem) static_cast<int>(sizeof((elem))/sizeof((elem)[0]))
 
@@ -270,12 +271,51 @@ class GLProgram : public IGLResource {
 		GLuint getProgramID() const;
 		void use() const;
 };
+//! OpenGLテクスチャインタフェース
+class IGLTexture : IGLResource {
+	protected:
+		GLuint	_idTex,
+				_filMin,
+				_filMag;
+		int		_width,
+				_height;
 
-//! OpenGLテクスチャクラス
-class GLTexture : public IGLResource {
-	GLuint _idTex;
+		bool _onDeviceReset();
+		void _applyFilter();
+		IGLTexture(GLuint filMin, GLuint filMag);
 
 	public:
-		GLuint getTextureID() const;
-		bool operator == (const GLTexture& t) const;
+		~IGLTexture();
+		int getWidth() const;
+		int getHeight() const;
+		GLint getTextureID() const;
+		GLuint getFilterMin() const;
+		GLuint getFilterMag() const;
+		void setFilter(GLuint fMin, GLuint fMag);
+		void onDeviceLost() override;
+		void use() const;		//!< 現在のテクスチャユニットにBind
+		void use(int n) const;	//!< テクスチャユニット番号を指定してBind
+		static void use_end();
+};
+//! ファイルから生成したテクスチャ
+/*! DeviceLost時:
+	一旦バッファにコピーして後で復元 */
+class TexFile : public IGLTexture {
+	QString	_fPath;
+
+	public:
+		TexFile(const QString& path, GLuint filMin=GL_LINEAR_MIPMAP_LINEAR, GLuint filMag=GL_LINEAR);
+		void onDeviceReset() override;
+		bool operator == (const TexFile& t) const;
+};
+//! ユーザー定義のユニークテクスチャ
+/*! DeviceLost時:
+	再度ファイルから読み出す */
+class TexUser : public IGLTexture {
+	QImage	_image;
+
+	public:
+		TexUser(const QString& path);
+		bool operator == (const TexUser& t) const;
+		void onDeviceReset() override;
 };

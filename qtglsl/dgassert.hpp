@@ -73,14 +73,20 @@ struct DGAssert {
 };
 #define FUNCTIONNAME __func__
 #ifdef DEBUG
-	#define Assert(cond) AssertArg(cond, "")
-	#define AssertArg(cond, ...) { static bool bIgnored = false; \
+	#define AAssert(cond) AssertArg(cond, "")
+	#define AAssertArg(cond, ...) { static bool bIgnored = false; \
 	if(!bIgnored && !(cond)) { bIgnored = DGAssert::checkAssert(&DGAssert::Policy_Critical, #cond, __FILE__, FUNCTIONNAME, __LINE__, __VA_ARGS__); } }
-	#define Warn(cond) WarnArg(cond, "")
-	#define WarnArg(cond, ...) DGAssert::checkAssert(&DGAssert::Policy_Warning, , #cond, __FILE__, FUNCTIONNAME, __LINE__, __VA_ARGS__);
+	#define AWarn(cond) WarnArg(cond, "")
+	#define AWarnArg(cond, ...) { if(!(cond)) { DGAssert::checkAssert(&DGAssert::Policy_Warning, #cond, __FILE__, FUNCTIONNAME, __LINE__, __VA_ARGS__); }}
 #else
-	#define Assert(cond)
-	#define AssertArg(cond, ...)
-	#define Warn(cond)
-	#define WarnArg(cond, ...)
+	#define AAssert(cond)
+	#define AAssertArg(cond, ...)
+	#define AWarn(cond)
+	#define AWarnArg(cond, ...)
 #endif
+
+#define Assert(cond) AssertArg(cond, "")
+#define AssertArg(cond, ...) { static bool bIgnored = false; \
+if(!bIgnored && !(cond)) { bIgnored = DGAssert::checkAssert(&DGAssert::Policy_Critical, #cond, __FILE__, FUNCTIONNAME, __LINE__, __VA_ARGS__); } }
+#define Warn(cond) WarnArg(cond, "")
+#define WarnArg(cond, ...) { if(!(cond)) { DGAssert::checkAssert(&DGAssert::Policy_Warning, #cond, __FILE__, FUNCTIONNAME, __LINE__, __VA_ARGS__); }}
