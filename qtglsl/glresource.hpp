@@ -11,8 +11,8 @@
 #include <sstream>
 #include <boost/format.hpp>
 #include <QImage>
-
-#define countof(elem) static_cast<int>(sizeof((elem))/sizeof((elem)[0]))
+#include "vector.hpp"
+#include <boost/variant.hpp>
 
 //! Tech:Pass の組み合わせを表す
 struct GL16ID {
@@ -231,15 +231,6 @@ class GLDevice : public IGLResource {
 #define GL_Warn() GL_WarnArg("")
 #define GL_ResetError() GLDevice::resetError();
 
-enum ShType : unsigned int {
-	VERTEX, GEOMETRY, PIXEL,
-	NUM_SHTYPE
-};
-//! シェーダーIDに対するOpenGL定数
-const static GLuint c_glShFlag[ShType::NUM_SHTYPE] = {
-	GL_VERTEX_SHADER, GL_GEOMETRY_SHADER, GL_FRAGMENT_SHADER
-};
-
 //! GLSLプログラムクラス
 class GLProgram : public IGLResource {
 	SPShader	_shader[ShType::NUM_SHTYPE];
@@ -272,50 +263,150 @@ class GLProgram : public IGLResource {
 		void use() const;
 };
 //! OpenGLテクスチャインタフェース
+/*!	フィルターはNEARESTとLINEARしか無いからboolで管理 */
 class IGLTexture : IGLResource {
+	public:
+		enum State {
+			NotDecided = -1,
+			NoMipmap,
+			MipmapNear,
+			MipmapLinear
+		};
 	protected:
-		GLuint	_idTex,
-				_filMin,
-				_filMag;
+		GLuint	_idTex;
+		int		_iLinearMag,	//!< Linearの場合は1, Nearestは0
+				_iLinearMin,
+				_iWrapS,
+				_iWrapT;
 		int		_width,
 				_height;
+		bool	_bChanged;	//!< 何かフィルタ設定が変更された時にtrue
+
+		const static GLuint cs_Filter[3][2];
+
+		State	_state;
+		GLuint	_texFlag;	//!< TEXTURE_2D or TEXTURE_CUBE_MAP
+		float	_coeff;
 
 		bool _onDeviceReset();
+		IGLTexture(bool bCube);
 		void _applyFilter();
-		IGLTexture(GLuint filMin, GLuint filMag);
 
 	public:
 		~IGLTexture();
 		int getWidth() const;
 		int getHeight() const;
 		GLint getTextureID() const;
-		GLuint getFilterMin() const;
-		GLuint getFilterMag() const;
-		void setFilter(GLuint fMin, GLuint fMag);
+		void setFilter(bool bLinearMag, bool bLinearMin);
+		void setAnisotropicCoeff(float coeff);
+		void setUVWrap(GLuint s, GLuint t);
 		void onDeviceLost() override;
-		void use() const;		//!< 現在のテクスチャユニットにBind
-		void use(int n) const;	//!< テクスチャユニット番号を指定してBind
-		static void use_end();
+		void use();				//!< 現在のテクスチャユニットにBind
+		void use(int n);		//!< テクスチャユニット番号を指定してBind
+		void use_end() const;
+		void applyFilter();
+		void setMipmap(State level);
+
+		bool isMipmap() const;
+		bool isCubemap() const;
 };
+
+template <class T, int N>
+struct Pack {
+	T	val[N];
+	Pack() = default;
+	Pack(std::initializer_list<T> il) {
+		T* pVal = val;
+		for(auto& a : il)
+			*pVal++ = a;
+	}
+	Pack(const T& t) {
+		for(auto& a : val)
+			a = t;
+	}
+
+	bool operator == (const Pack& p) const {
+		for(int i=0 ; i<6 ; i++) {
+			if(val[i] != p.val[i])
+				return false;
+		}
+		return true;
+	}
+};
+
 //! ファイルから生成したテクスチャ
 /*! DeviceLost時:
 	一旦バッファにコピーして後で復元 */
 class TexFile : public IGLTexture {
-	QString	_fPath;
+	using QS6 = Pack<QString, 6>;
+	boost::variant<QString, QS6>	_fPath;
 
 	public:
-		TexFile(const QString& path, GLuint filMin=GL_LINEAR_MIPMAP_LINEAR, GLuint filMag=GL_LINEAR);
+		//! Cube時: 連番ファイル名から作成
+		TexFile(const QString& path, bool bCube);
+		TexFile(const QString& path0, const QString& path1, const QString& path2,
+									const QString& path3, const QString& path4, const QString& path5);
 		void onDeviceReset() override;
 		bool operator == (const TexFile& t) const;
 };
+
 //! ユーザー定義のユニークテクスチャ
 /*! DeviceLost時:
 	再度ファイルから読み出す */
 class TexUser : public IGLTexture {
-	QImage	_image;
+	using QI6 = Pack<QImage, 6>;
+	boost::variant<QImage, QI6>		_image;
 
 	public:
-		TexUser(const QString& path);
-		bool operator == (const TexUser& t) const;
+		TexUser(const QImage& img);
+		TexUser(const QImage& img0, const QImage& img1, const QImage& img2,
+				const QImage& img3, const QImage& img4, const QImage& img5);
 		void onDeviceReset() override;
+		bool operator == (const TexUser& t) const;
+};
+
+//! デバッグ用テクスチャ模様生成インタフェース
+class ITDGen {
+	protected:
+		using UPByte = std::unique_ptr<GLubyte>;
+		UPByte	_buff;
+		int		_width, _height;
+
+		ITDGen(int w, int h);
+
+	public:
+		const GLubyte* getPtr() const;
+		int getWidth() const;
+		int getHeight() const;
+};
+//! 2色チェッカー
+class TDChecker : public ITDGen {
+	public:
+		TDChecker(const spn::Vec4& col0, const spn::Vec4& col1, int nDivW, int nDivH, int w, int h);
+};
+//! カラーチェッカー
+/*! 準モンテカルロで色を決定 */
+class TDCChecker : public ITDGen {
+	public:
+		TDCChecker(int nDivW, int nDivH, int w, int h);
+};
+//! ベタ地と1テクセル枠
+class TDBorder : public ITDGen {
+	public:
+		TDBorder(const spn::Vec4& col, const spn::Vec4& bcol, int w, int h);
+};
+
+//! デバッグ用のチェッカーテクスチャ
+/*! DeviceLost時:
+	再度生成し直す */
+class TexDebug : public IGLTexture {
+	// デバッグ用なので他との共有を考えず、UniquePtrとする
+	std::unique_ptr<ITDGen>	_upGen;
+	using ITD6 = Pack<ITDGen*, 6>;
+	boost::variant<ITDGen*, ITD6>	_gen;
+
+	public:
+		TexDebug(ITDGen* gen, bool bCube);
+		void onDeviceReset() override;
+		bool operator == (const TexDebug& t) const;
 };

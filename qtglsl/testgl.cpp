@@ -67,7 +67,8 @@ void TestGL::initialize() {
 	_ibo->initData(tmpI, countof(tmpI));
 
 	// テクスチャ読み込み
-	_tex.reset(new TexFile("sample.png"));
+	_tex.reset(new TexDebug(new TDChecker(spn::Vec4(1,1,1,1), spn::Vec4(0,0,0,0), 24,24,256,256), false));
+	_tex->setFilter(false,false);
 }
 void TestGL::render() {
 	glClearColor(0,0,1.0f, 1.0f);
@@ -76,7 +77,7 @@ void TestGL::render() {
 	int w = width(),
 		h = height();
 	glViewport(0,0,w,h);
-	if(!_vbo)
+	if(!_vbo || !_tex)
 		return;
 
 	static float angle = 0;

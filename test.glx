@@ -23,7 +23,7 @@ varying TheVary {
 }
 vertexshader TheVS() {
 	vec3 tmp = atPos;
-	tmp.z += 2.0;
+	tmp.z += 1.0;
 	vec4 v = vec4(tmp,1);
 	gl_Position = v * mTrans;
 	vrTex = atTex;
