@@ -34,9 +34,7 @@ HEADERS  += mainwindow.h \
 	glx_macro.hpp \
 	testgl.hpp \
 	gldefine.hpp \
-	dgassert.hpp \
-	../../../projects/dgmath/vector.hpp \
-	../../../projects/dgmath/matrix.hpp
+	dgassert.hpp
 
 FORMS    += mainwindow.ui
 
@@ -45,5 +43,5 @@ QMAKE_CXXFLAGS_DEBUG += -Wno-sequence-point -Wno-unused-parameter -Wno-unused-va
 QMAKE_CXX = 'clang++ -DDEBUG'
 QMAKE_LINK = clang++
 LIBS += -lGLU -lspinner
-QMAKE_LIBDIR += /home/slice/projects/dgmath/build/
-QMAKE_INCDIR += /home/slice/projects/dgmath/
+QMAKE_LIBDIR += /tmp/spinner_build/
+QMAKE_INCDIR += ./spinner/

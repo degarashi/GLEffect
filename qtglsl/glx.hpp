@@ -3,7 +3,7 @@
 #include "gldefine.hpp"
 #include "glresource.hpp"
 #include "glx_parse.hpp"
-#include "matrix.hpp"
+#include "spinner/matrix.hpp"
 #include <functional>
 #include <unordered_map>
 #include <unordered_set>

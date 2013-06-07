@@ -5,7 +5,7 @@
 #include "testgl.hpp"
 #include "glresource.hpp"
 #include "glx.hpp"
-#include "matrix.hpp"
+#include "spinner/matrix.hpp"
 
 TestGL::TestGL() {}
 void TestGL::initialize() {

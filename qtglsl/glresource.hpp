@@ -11,7 +11,7 @@
 #include <sstream>
 #include <boost/format.hpp>
 #include <QImage>
-#include "vector.hpp"
+#include "spinner/vector.hpp"
 #include <boost/variant.hpp>
 
 //! Tech:Pass の組み合わせを表す

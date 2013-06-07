@@ -1,0 +1,3 @@
+[submodule "qtglsl/spinner"]
+	path = qtglsl/spinner
+	url = /home/slice/projects/spinner

@@ -1,6 +1,6 @@
 #define BOOST_PP_VARIADICS 1
 #include "glx.hpp"
-#include "matrix.hpp"
+#include "spinner/matrix.hpp"
 #include <boost/format.hpp>
 #include <fstream>
 
