@@ -1,0 +1,11 @@
+Sorry, japanese text only (for now :)
+
+・これは何？
+	>OpenGLでDirectX9のD3DXEffectファイルのようにシェーダー記述する仕組み
+
+・何故自分で書いたか
+	>以前使っていたDirectX9からDirectX11へ以降するかOpenGLに行くかで迷った末に（Androidでも使えるという事で）OpenGLを選択
+		その際にシェーダーファイルのリンクなどが面倒だと感じていた
+	>気がついたら書いていた
+
+<開発途中なので実用性はありません>

@@ -1,0 +1,40 @@
+char		= boost::qi::char_
+bool		= boost::qi::bool_
+float		= boost::qi::float_
+
+------------------------ GLEffect format (EBNF) ------------------------
+
+String		= '"' (char - '"')* '"'
+NameToken	= (alnum | '_')+
+Vector		= '[' float+ ']'
+Parameter	= Vector | float | bool
+Argument	= GLShadertype NameToken
+Arguments	= (Argument (',' Argument)*)?
+ShBlock		= GLShadertype  NameToken '(' Arguments ')' '{' (char-'}')* '}'
+MacroBlock	= "macro" '{' MacroEntry* '}'
+BlockP		= BlockUse | BoolSetting | MacroBlock | ShaderUse | ValueSetting
+BlockT		= BlockP | PassBlock
+PassBlock	= "pass" NameToken '{' BlockP* '}'
+TechBlock	= "technique" NameToken (':' NameToken (',' NameToken)*)? '{' BlockT* '}'
+CommentS	= "//" (char - eol - eoi)* (eol | eoi)
+CommentL	= "/*" (char - "*\/")* "*\/"
+Comment		= CommentS | CommentL
+
+VaryEntry	= GLPrecision? GLType NameToken ':' GLSem ';'
+AttrEntry	= GLPrecision? GLType NameToken ';'
+UnifEntry	= GLPrecision? GLType NameToken ('<' NameToken '>')? ('=' Parameter)? ';'
+
+MacroEntry	= NameToken ('=' NameToken)? ';'
+ConstEntry	= GLPrecision? GLType NameToken '=' Parameter ';'
+
+BoolSetting	= GLBoolsetting '=' bool ';'
+ValueSetting = GLSetting '=' (GLColormask | float | bool){1,4}
+BlockUse	= GLBlocktype ('=' | '+=') NameToken (',' NameToken)* ';'
+ShaderUse	= GLShadertype '=' NameToken '(' (Parameter (',' Parameter)*)? ')' ';'
+
+AttrBlock	= "attribute" NameToken (':' NameToken (',' NameToken)*)? '{' AttrEntry* '}'
+VaryBlock	= "varying" NameToken (':' NameToken (',' NameToken)*)? '{' VaryEntry* '}'
+UnifBlock	= "uniform" NameToken (':' NameToken (',' NameToken)*)? '{' UnifEntry* '}'
+ConstBlock	= "const" NameToken (':' NameToken (',' NameToken)*)? '{' ConstEntry* '}'
+
+GLEffect	= (AttrBlock | ConstBlock | ShBlock | TechBlock | UnifBlock | VaryBlock)*
