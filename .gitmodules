@@ -1,3 +1,6 @@
 [submodule "qtglsl/spinner"]
 	path = qtglsl/spinner
 	url = /home/slice/projects/spinner
+[submodule "gleffect/spinner"]
+	path = gleffect/spinner
+	url = /home/slice/projects/spinner

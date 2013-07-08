@@ -32,27 +32,29 @@ void TestGL::initialize() {
 	GL_ACheck()
 	_gle->setUniform(spn::Vec4{1,2,3,4}, _gle->getUniformID("lowVal"));
 
+	using spn::Vec3;
+	using spn::Vec4;
 	// 頂点定義
 	struct TmpV {
-		spn::Vec3 pos;
-		spn::Vec4 tex;
+		Vec3 pos;
+		Vec4 tex;
 	};
 	TmpV tmpV[] = {
 		{
-			{-1,-1,0},
-			{0,1,0,0}
+			Vec3{-1,-1,0},
+			Vec4{0,1,0,0}
 		},
 		{
-			{-1,1,0},
-			{0,0,0,0}
+			Vec3{-1,1,0},
+			Vec4{0,0,0,0}
 		},
 		{
-			{1,1,0},
-			{1,0,0,0}
+			Vec3{1,1,0},
+			Vec4{1,0,0,0}
 		},
 		{
-			{1,-1,0},
-			{1,1,0,0}
+			Vec3{1,-1,0},
+			Vec4{1,1,0,0}
 		}
 	};
 	_vbo.reset(new GLVBuffer(GL_STATIC_DRAW));
