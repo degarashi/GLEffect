@@ -50,13 +50,13 @@ struct BoolSettingR {
 
 struct VData {
 	const static int MAX_STREAM = 4;
-	using SPBuffA = SPVBuffer[MAX_STREAM];
+	using HLBuffA = HLVb[MAX_STREAM];
 	using AttrA = GLint[static_cast<int>(VSem::NUM_SEMANTIC)];
 
-	const SPBuffA&	spBuff;
+	const HLBuffA&	hlBuff;
 	const AttrA&	attrID;
 
-	VData(const SPBuffA& b, const AttrA& at): spBuff(b), attrID(at) {}
+	VData(const HLBuffA& b, const AttrA& at): hlBuff(b), attrID(at) {}
 };
 //! 頂点宣言
 class VDecl {
@@ -85,7 +85,7 @@ class VDecl {
 
 using UniVal = boost::variant<bool, int, float, spn::Vec3, spn::Vec4,
 				spn::Mat32, spn::AMat32, spn::Mat33, spn::AMat33,
-				spn::Mat43, spn::AMat43, spn::Mat44, spn::AMat44, SPTexture>;
+				spn::Mat43, spn::AMat43, spn::Mat44, spn::AMat44, HLTex>;
 using UniMapStr = std::unordered_map<std::string, UniVal>;
 using UniMapID = std::unordered_map<GLint, UniVal>;
 using UniEntryMap = std::unordered_set<std::string>;
@@ -95,7 +95,7 @@ using Setting = boost::variant<BoolSettingR, ValueSettingR>;
 using SettingList = std::vector<Setting>;
 //! Tech | Pass の分だけ作成
 class TPStructR {
-	SPProg			_prog;
+	HLProg			_prog;
 	// --- 関連情報(ゼロから構築する場合の設定項目) ---
 	//! Attribute: 頂点セマンティクスに対する頂点ID
 	/*! 無効なセマンティクスは負数 */
@@ -117,11 +117,11 @@ class TPStructR {
 		const UniMapID& getUniformDefault() const;
 		const UniEntryMap& getUniformEntries() const;
 
-		const SPProg& getProgram() const;
+		const HLProg& getProgram() const;
 		//! OpenGLに設定を適用
 		void applySetting() const;
 		//! 頂点ポインタを設定 (GLXから呼ぶ)
-		void setVertex(const SPVDecl& vdecl, const SPVBuffer (&stream)[VData::MAX_STREAM]) const;
+		void setVertex(const SPVDecl& vdecl, const HLVb (&stream)[VData::MAX_STREAM]) const;
 		//! 設定差分を求める
 		static TPStructR calcDiff(const TPStructR& from, const TPStructR& to);
 };
@@ -159,7 +159,7 @@ namespace Bit {
 }
 
 //! GLXエフェクト管理クラス
-class GLEffect {
+class GLEffect : public IGLResource {
 	public:
 		using TexIndex = std::unordered_map<GLint, GLint>;
 	private:
@@ -177,8 +177,8 @@ class GLEffect {
 
 		// --------------- 現在アクティブな設定 ---------------
 		SPVDecl			_spVDecl;
-		SPVBuffer		_vBuffer[VData::MAX_STREAM];
-		SPIBuffer		_iBuffer;
+		HLVb			_vBuffer[VData::MAX_STREAM];
+		HLIb			_iBuffer;
 		using TPID = boost::optional<int>;
 		TPID			_idTech, _idTechCur,
 						_idPass, _idPassCur;
@@ -236,11 +236,11 @@ class GLEffect {
 		//! Uniform変数設定 (Tech/Passで指定された名前とセマンティクスのすり合わせを行う)
 		GLint getUniformID(const std::string& name);
 		template <class T>
-		void setUniform(const T& v, GLint id) {
+		void setUniform(T&& v, GLint id) {
 			if(id < 0)
 				return;
 			_rflg |= REFL_UNIFORM;
-			_uniMapID.insert(std::make_pair(id, v));
+			_uniMapID.insert(std::make_pair(id, std::forward<T>(v)));
 		}
 
 		//! 現在セットされているUniform変数の保存用
@@ -254,8 +254,8 @@ class GLEffect {
 		//! 頂点宣言
 		/*! \param[in] decl 頂点定義クラスのポインタ(定数を前提) */
 		void setVDecl(const SPVDecl& decl);
-		void setVStream(const SPVBuffer& sp, int n);
-		void setIStream(const SPIBuffer& sp);
+		void setVStream(HVb vb, int n);
+		void setIStream(HIb ib);
 		//! Tech指定
 		/*!	Techを切り替えるとUniformがデフォルトにリセットされる
 			切替時に引数としてUniMapを渡すとそれで初期化 */

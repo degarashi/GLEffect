@@ -1,3 +1,4 @@
+#include "spinner/common.hpp"
 #include "glresource.hpp"
 #include <cstring>
 

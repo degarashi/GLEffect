@@ -1,5 +1,6 @@
 #define BOOST_PP_VARIADICS 1
 #include "glx.hpp"
+#include "spinner/common.hpp"
 #include "spinner/matrix.hpp"
 #include <boost/format.hpp>
 #include <fstream>
@@ -131,9 +132,10 @@ VDecl::VDecl(std::initializer_list<VDInfo> il) {
 }
 void VDecl::apply(const VData& vdata) const {
 	for(int i=0 ; i<VData::MAX_STREAM ; i++) {
-		auto& sp = vdata.spBuff[i];
+		auto& hl = vdata.hlBuff[i];
 		// VStreamが設定されていればBindする
-		if(sp) {
+		if(hl.valid()) {
+			auto& sp = hl.cref();
 			sp->use();
 
 			GLuint stride = sp->getStride();
@@ -287,12 +289,12 @@ void GLEffect::setVDecl(const SPVDecl& decl) {
 	_spVDecl = decl;
 	_rflg |= REFL_VSTREAM;
 }
-void GLEffect::setVStream(const SPVBuffer& sp, int n) {
-	_vBuffer[n] = sp;
+void GLEffect::setVStream(HVb vb, int n) {
+	_vBuffer[n] = vb;
 	_rflg |= REFL_VSTREAM;
 }
-void GLEffect::setIStream(const SPIBuffer& sp) {
-	_iBuffer = sp;
+void GLEffect::setIStream(HIb ib) {
+	_iBuffer = ib;
 	_rflg |= REFL_ISTREAM;
 }
 void GLEffect::setTechnique(int techID, bool bDefault) {
@@ -358,7 +360,7 @@ void GLEffect::_refreshProgram() {
 		auto& tps = _techMap.at(id);
 		// [_idTechCur|_idPassCur] から [_idTech|_idPass] への遷移
 		// とりあえず全設定
-		tps.getProgram()->use();
+		tps.getProgram().cref()->use();
 		tps.applySetting();
 
 		_uniMapIDTmp.clear();
@@ -374,7 +376,7 @@ void GLEffect::_refreshProgram() {
 
 		// テクスチャインデックスリスト作成
 		_texIndex.clear();
-		GLuint pid = tps.getProgram()->getProgramID();
+		GLuint pid = tps.getProgram().cref()->getProgramID();
 		GLint nUnif;
 		glGetProgramiv(pid, GL_ACTIVE_UNIFORMS, &nUnif);
 
@@ -422,10 +424,10 @@ namespace {
 		void operator()(const spn::Mat44& m) const {
 			glUniformMatrix4fv(_id, 1, true, reinterpret_cast<const GLfloat*>(m.ma));
 		}
-		void operator()(const SPTexture& tex) const {
+		void operator()(const HLTex& tex) const {
 			auto itr = _tIdx.find(_id);
 			if(itr != _tIdx.end()) {
-				tex->use(itr->second);
+				tex.cref()->use(itr->second);
 				glUniform1i(_id, itr->second);
 				GL_Warn()
 			} else
@@ -462,14 +464,14 @@ void GLEffect::_refreshIStream() {
 	if(Bit::ChClear(_rflg, REFL_ISTREAM)) {
 		_refreshProgram();
 		// ElementArrayをシェーダーに設定
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, _iBuffer->getBuffID());
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, _iBuffer.cref()->getBuffID());
 		GL_ACheck()
 	}
 }
 
 GLint GLEffect::getUniformID(const std::string& name) {
 	_refreshProgram();
-	GLint loc = glGetUniformLocation(_tps->getProgram()->getProgramID(), name.c_str());
+	GLint loc = glGetUniformLocation(_tps->getProgram().cref()->getProgramID(), name.c_str());
 	GL_ACheck()
 	WarnArg(loc>=0, "Uniform argument \"%1%\" not found", name)
 	return loc;
@@ -481,7 +483,7 @@ void GLEffect::draw(GLenum mode, GLint first, GLsizei count) {
 }
 void GLEffect::drawIndexed(GLenum mode, GLsizei count, GLuint offset) {
 	applySetting();
-	GLenum sz = _iBuffer->getStride() == sizeof(GLshort) ? GL_UNSIGNED_SHORT : GL_UNSIGNED_BYTE;
+	GLenum sz = _iBuffer.cref()->getStride() == sizeof(GLshort) ? GL_UNSIGNED_SHORT : GL_UNSIGNED_BYTE;
 	glDrawElements(mode, count, sz, reinterpret_cast<const GLvoid*>(offset));
 	GL_ACheck();
 }
@@ -661,7 +663,7 @@ TPStructR::TPStructR(const GLXStruct& gs, int tech, int pass) {
 
 	std::stringstream ss;
 	TPSDupl dupl(gs, tech, pass);
-	SPShader shP[ShType::NUM_SHTYPE];
+	HLSh shP[ShType::NUM_SHTYPE];
 	std::vector<const AttrEntry*> attL;
 	std::vector<const UnifEntry*> unifL;
 	for(int i=0 ; i<countof(selectSh) ; i++) {
@@ -704,13 +706,13 @@ TPStructR::TPStructR(const GLXStruct& gs, int tech, int pass) {
 
 		std::cout << ss.str();
 		std::cout.flush();
-		shP[i].reset(new GLShader(c_glShFlag[i], ss.str()));
+		shP[i] = mgr_gl.makeShader(c_glShFlag[i], ss.str());
 
 		ss.str("");
 		ss.clear();
 	}
 	// シェーダーのリンク処理
-	_prog.reset(new GLProgram(shP[0], shP[1], shP[2]));
+	_prog = mgr_gl.makeProgram(shP[0].get(), shP[1].get(), shP[2].get());
 	// 頂点AttribIDを無効な値で初期化
 	for(auto& v : _vAttrID)
 		v = -2;	// 初期値=-2, クエリの無効値=-1
@@ -720,7 +722,7 @@ TPStructR::TPStructR(const GLXStruct& gs, int tech, int pass) {
 		auto& atID = _vAttrID[p->sem];
 		if(atID != -2)
 			throw GLE_LogicalError((boost::format("duplication of vertex semantics \"%1% : %2%\"") % p->name % GLSem_::cs_typeStr[p->sem]).str());
-		atID = glGetAttribLocation(_prog->getProgramID(), p->name.c_str());
+		atID = glGetAttribLocation(_prog.cref()->getProgramID(), p->name.c_str());
 		GL_ACheck()
 		// -1の場合は警告を出す(もしかしたらシェーダー内で使ってないだけかもしれない)
 	}
@@ -731,7 +733,7 @@ TPStructR::TPStructR(const GLXStruct& gs, int tech, int pass) {
 
 	// Uniform変数にデフォルト値がセットしてある物をリストアップ
 	Visitor visitor;
-	visitor.pgID = _prog->getProgramID();
+	visitor.pgID = _prog.cref()->getProgramID();
 	for(const auto* p : unifL) {
 		if(p->defStr) {
 			// 変数名をIDに変換
@@ -760,7 +762,7 @@ void TPStructR::applySetting() const {
 const UniMapID& TPStructR::getUniformDefault() const { return _defValue; }
 const UniEntryMap& TPStructR::getUniformEntries() const { return _noDefValue; }
 
-void TPStructR::setVertex(const SPVDecl& vdecl, const SPVBuffer (&stream)[VData::MAX_STREAM]) const {
+void TPStructR::setVertex(const SPVDecl& vdecl, const HLVb (&stream)[VData::MAX_STREAM]) const {
 	vdecl->apply(VData(stream, _vAttrID));
 }
-const SPProg& TPStructR::getProgram() const { return _prog; }
+const HLProg& TPStructR::getProgram() const { return _prog; }

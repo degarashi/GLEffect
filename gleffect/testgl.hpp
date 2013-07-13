@@ -1,13 +1,17 @@
 #pragma once
+#include <QApplication>
+
 #include "mainwindow.h"
 #include "gldefine.hpp"
+#include "glresource.hpp"
+#include "glx.hpp"
 
 class TestGL : public OpenGLWindow {
 	Q_OBJECT
-	SPEffect	_gle;
-	SPVBuffer	_vbo;
-	SPIBuffer	_ibo;
-	SPTexture	_tex;
+	HLFx	_hlFx;
+	HLVb	_hlVb;
+	HLIb	_hlIb;
+	HLTex	_hlTex;
 
 	public:
 		TestGL();

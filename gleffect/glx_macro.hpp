@@ -50,5 +50,3 @@
 #define MAKE_SEQ_B_20X0()
 #define MAKE_SEQ_A_30X0()
 #define MAKE_SEQ_B_30X0()
-
-#define countof(elem) static_cast<int>(sizeof((elem))/sizeof((elem)[0]))

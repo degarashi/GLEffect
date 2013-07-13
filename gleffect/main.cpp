@@ -4,8 +4,11 @@
 #include <QApplication>
 #include <QMessageBox>
 #include <QAbstractButton>
+#include "glresource.hpp"
 
 int main(int argc, char *argv[]) {
+	std::unique_ptr<GLRes> glRes(new GLRes());
+
 	QApplication app(argc, argv);
 	QSurfaceFormat fmt;
 	fmt.setSamples(0);

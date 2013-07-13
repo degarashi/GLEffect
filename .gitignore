@@ -1,3 +1,4 @@
 *~
 build-qtglsl-*/
 sample.png
+*.pro.user*

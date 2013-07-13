@@ -83,8 +83,8 @@ void GLProgram::_initProgram() {
 	for(int i=0 ; i<static_cast<int>(ShType::NUM_SHTYPE) ; i++) {
 		auto& sh = _shader[i];
 		// Geometryシェーダー以外は必須
-		if(sh) {
-			glAttachShader(_idProg, sh->getShaderID());
+		if(sh.valid()) {
+			glAttachShader(_idProg, sh.cref()->getShaderID());
 			GL_ACheck()
 		} else {
 			if(i != ShType::GEOMETRY)
@@ -106,8 +106,8 @@ GLProgram::~GLProgram() {
 void GLProgram::onDeviceLost() {
 	for(auto& s : _shader) {
 		if(s) {
-			glDetachShader(_idProg, s->getShaderID());
-			s->onDeviceLost();
+			glDetachShader(_idProg, s.cref()->getShaderID());
+			s.cref()->onDeviceLost();
 		}
 	}
 	glDeleteProgram(_idProg);
@@ -116,9 +116,9 @@ void GLProgram::onDeviceLost() {
 void GLProgram::onDeviceReset() {
 	for(auto& s : _shader)
 		if(s)
-			s->onDeviceReset();
+			s.cref()->onDeviceReset();
 }
-const SPShader& GLProgram::getShader(ShType type) const {
+const HLSh& GLProgram::getShader(ShType type) const {
 	return _shader[(int)type];
 }
 int GLProgram::getUniformID(const std::string& name) const {

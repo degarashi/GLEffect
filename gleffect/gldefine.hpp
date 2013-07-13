@@ -2,8 +2,9 @@
 #include <memory>
 #include <vector>
 #include <GL/gl.h>
-#define countof(elem) static_cast<int>(sizeof((elem))/sizeof((elem)[0]))
 
+struct IGLResource;
+using SPResource = std::shared_ptr<IGLResource>;
 class GLEffect;
 using SPEffect = std::shared_ptr<GLEffect>;
 class VDecl;

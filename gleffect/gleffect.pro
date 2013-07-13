@@ -23,7 +23,8 @@ SOURCES += main.cpp\
 	glbuffer.cpp \
 	openglwindow.cpp \
 	glx_parse2.cpp \
-	glassert.cpp
+	glassert.cpp \
+    glresource.cpp
 
 HEADERS  += mainwindow.h \
 	glext.h \
@@ -39,8 +40,8 @@ HEADERS  += mainwindow.h \
 FORMS    += mainwindow.ui
 
 CONFIG += c++11
-QMAKE_CXXFLAGS_DEBUG += -Wno-sequence-point -Wno-unused-parameter -Wno-unused-variable
-QMAKE_CXX = 'clang++ -DDEBUG'
+QMAKE_CXXFLAGS_DEBUG += -DDEBUG -ggdb3 -Wno-sequence-point -Wno-unused-parameter -Wno-unused-variable
+QMAKE_CXX = 'clang++'
 QMAKE_LINK = clang++
 LIBS += -lGLU -lspinner
 QMAKE_LIBDIR += /tmp/spinner_build/

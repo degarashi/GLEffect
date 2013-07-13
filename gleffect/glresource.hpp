@@ -13,6 +13,7 @@
 #include <QImage>
 #include "spinner/vector.hpp"
 #include <boost/variant.hpp>
+#include "spinner/resmgr.hpp"
 
 //! Tech:Pass の組み合わせを表す
 struct GL16ID {
@@ -231,30 +232,74 @@ class GLDevice : public IGLResource {
 #define GL_Warn() GL_WarnArg("")
 #define GL_ResetError() GLDevice::resetError();
 
+#define mgr_gl GLRes::_ref()
+//! OpenGL関連のリソースマネージャ
+class GLRes : public spn::ResMgrN<SPResource, GLRes> {
+	using base_type = spn::ResMgrN<SPResource, GLRes>;
+	public:
+		//! ベースクラスのacquireメソッドを隠す為のダミー
+		void acquire();
+		//! ファイルからテクスチャを読み込む
+		AnotherLHandle<SPTexture> loadTexture(const QString& path, bool bCube=false);
+		//! 文字列からシェーダーを作成
+		AnotherLHandle<SPShader> makeShader(GLuint flag, const std::string& src);
+
+		using HSh = AnotherSHandle<SPShader>;
+		using HLProg = AnotherLHandle<SPProg>;
+		//! 複数のシェーダーからプログラムを作成 (vertex, geometry, pixel)
+		HLProg makeProgram(HSh vsh, HSh gsh, HSh psh);
+		//! 複数のシェーダーからプログラムを作成 (vertex, pixel)
+		HLProg makeProgram(HSh vsh, HSh psh);
+
+		//! ファイルからエフェクトの読み込み
+		AnotherLHandle<SPEffect> loadEffect(const QString& path);
+		//! 頂点バッファの確保
+		AnotherLHandle<SPVBuffer> makeVBuffer(GLuint dtype);
+		//! インデックスバッファの確保
+		AnotherLHandle<SPIBuffer> makeIBuffer(GLuint dtype);
+
+		LHdl _common(const QString& key, std::function<SPResource()> cb);
+};
+
+#define DEF_HANDLE(suffix, sp) \
+	using HL##suffix = GLRes::AnotherLHandle<sp>; \
+	using H##suffix = GLRes::AnotherSHandle<sp>; \
+	using W##suffix = GLRes::AnotherWHandle<sp>;
+DEF_HANDLE(Tex, SPTexture)
+DEF_HANDLE(Vb, SPVBuffer)
+DEF_HANDLE(Ib, SPIBuffer)
+DEF_HANDLE(Buff, SPBuffer)
+DEF_HANDLE(Prog, SPProg)
+DEF_HANDLE(Sh, SPShader)
+DEF_HANDLE(Fx, SPEffect)
+DEF_HANDLE(Res, SPResource)
+#undef DEF_HANDLE
+
 //! GLSLプログラムクラス
 class GLProgram : public IGLResource {
-	SPShader	_shader[ShType::NUM_SHTYPE];
+	HLSh		_shader[ShType::NUM_SHTYPE];
 	GLuint		_idProg;
 
-	void _setShader(int) {}
-	template <class... Ts>
-	void _setShader(int n, const SPShader& sp0, const Ts&... sp) {
-		_shader[n] = sp0;
-		_setShader(n+1, sp...);
-	}
 	void _initProgram();
 
 	public:
-		template <class... Ts>
-		GLProgram(const Ts&... sp) {
-			static_assert(sizeof...(Ts) <= (size_t)ShType::NUM_SHTYPE, "invalid arguments");
-			_setShader(0, sp...);
+		GLProgram(HSh vsh, HSh psh) {
+			_shader[ShType::VERTEX] = vsh;
+			_shader[ShType::PIXEL] = psh;
 			_initProgram();
 		}
+		GLProgram(HSh vsh, HSh gsh, HSh psh) {
+			_shader[ShType::VERTEX] = vsh;
+			_shader[ShType::PIXEL] = psh;
+			_shader[ShType::GEOMETRY] = gsh;
+			_initProgram();
+		}
+
+		GLProgram();
 		~GLProgram() override;
 		void onDeviceLost() override;
 		void onDeviceReset() override;
-		const SPShader& getShader(ShType type) const;
+		const HLSh& getShader(ShType type) const;
 		int getUniformID(const std::string& name) const;
 		int getUniformIDNc(const std::string& name) const;
 		int getAttribID(const std::string& name) const;
@@ -264,7 +309,7 @@ class GLProgram : public IGLResource {
 };
 //! OpenGLテクスチャインタフェース
 /*!	フィルターはNEARESTとLINEARしか無いからboolで管理 */
-class IGLTexture : IGLResource {
+class IGLTexture : public IGLResource {
 	public:
 		enum State {
 			NotDecided = -1,
