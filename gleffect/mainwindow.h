@@ -23,10 +23,10 @@ class OpenGLWindow : public QWindow {
 	bool	_bUpdatePending,
 			_bAnimating;
 
-	using SPContext = std::shared_ptr<QOpenGLContext>;
-	using SPDevice = std::shared_ptr<QOpenGLPaintDevice>;
-	SPContext	_context;
-	SPDevice	_device;
+	using UPContext = std::shared_ptr<QOpenGLContext>;
+	using UPDevice = std::shared_ptr<QOpenGLPaintDevice>;
+	UPContext	_context;
+	UPDevice	_device;
 
 	protected:
 		bool event(QEvent* event);

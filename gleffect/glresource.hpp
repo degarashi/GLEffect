@@ -234,45 +234,45 @@ class GLDevice : public IGLResource {
 
 #define mgr_gl GLRes::_ref()
 //! OpenGL関連のリソースマネージャ
-class GLRes : public spn::ResMgrN<SPResource, GLRes> {
-	using base_type = spn::ResMgrN<SPResource, GLRes>;
+class GLRes : public spn::ResMgrN<UPResource, GLRes> {
+	using base_type = spn::ResMgrN<UPResource, GLRes>;
 	public:
 		//! ベースクラスのacquireメソッドを隠す為のダミー
 		void acquire();
 		//! ファイルからテクスチャを読み込む
-		AnotherLHandle<SPTexture> loadTexture(const QString& path, bool bCube=false);
+		AnotherLHandle<UPTexture> loadTexture(const QString& path, bool bCube=false);
 		//! 文字列からシェーダーを作成
-		AnotherLHandle<SPShader> makeShader(GLuint flag, const std::string& src);
+		AnotherLHandle<UPShader> makeShader(GLuint flag, const std::string& src);
 
-		using HSh = AnotherSHandle<SPShader>;
-		using HLProg = AnotherLHandle<SPProg>;
+		using HSh = AnotherSHandle<UPShader>;
+		using HLProg = AnotherLHandle<UPProg>;
 		//! 複数のシェーダーからプログラムを作成 (vertex, geometry, pixel)
 		HLProg makeProgram(HSh vsh, HSh gsh, HSh psh);
 		//! 複数のシェーダーからプログラムを作成 (vertex, pixel)
 		HLProg makeProgram(HSh vsh, HSh psh);
 
 		//! ファイルからエフェクトの読み込み
-		AnotherLHandle<SPEffect> loadEffect(const QString& path);
+		AnotherLHandle<UPEffect> loadEffect(const QString& path);
 		//! 頂点バッファの確保
-		AnotherLHandle<SPVBuffer> makeVBuffer(GLuint dtype);
+		AnotherLHandle<UPVBuffer> makeVBuffer(GLuint dtype);
 		//! インデックスバッファの確保
-		AnotherLHandle<SPIBuffer> makeIBuffer(GLuint dtype);
+		AnotherLHandle<UPIBuffer> makeIBuffer(GLuint dtype);
 
-		LHdl _common(const QString& key, std::function<SPResource()> cb);
+		LHdl _common(const QString& key, std::function<UPResource()> cb);
 };
 
 #define DEF_HANDLE(suffix, sp) \
 	using HL##suffix = GLRes::AnotherLHandle<sp>; \
 	using H##suffix = GLRes::AnotherSHandle<sp>; \
 	using W##suffix = GLRes::AnotherWHandle<sp>;
-DEF_HANDLE(Tex, SPTexture)
-DEF_HANDLE(Vb, SPVBuffer)
-DEF_HANDLE(Ib, SPIBuffer)
-DEF_HANDLE(Buff, SPBuffer)
-DEF_HANDLE(Prog, SPProg)
-DEF_HANDLE(Sh, SPShader)
-DEF_HANDLE(Fx, SPEffect)
-DEF_HANDLE(Res, SPResource)
+DEF_HANDLE(Tex, UPTexture)
+DEF_HANDLE(Vb, UPVBuffer)
+DEF_HANDLE(Ib, UPIBuffer)
+DEF_HANDLE(Buff, UPBuffer)
+DEF_HANDLE(Prog, UPProg)
+DEF_HANDLE(Sh, UPShader)
+DEF_HANDLE(Fx, UPEffect)
+DEF_HANDLE(Res, UPResource)
 #undef DEF_HANDLE
 
 //! GLSLプログラムクラス

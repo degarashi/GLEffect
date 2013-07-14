@@ -121,7 +121,7 @@ class TPStructR {
 		//! OpenGLに設定を適用
 		void applySetting() const;
 		//! 頂点ポインタを設定 (GLXから呼ぶ)
-		void setVertex(const SPVDecl& vdecl, const HLVb (&stream)[VData::MAX_STREAM]) const;
+		void setVertex(const UPVDecl& vdecl, const HLVb (&stream)[VData::MAX_STREAM]) const;
 		//! 設定差分を求める
 		static TPStructR calcDiff(const TPStructR& from, const TPStructR& to);
 };
@@ -176,7 +176,7 @@ class GLEffect : public IGLResource {
 		TechName		_techName;		//!< Tech名とPass名のセット
 
 		// --------------- 現在アクティブな設定 ---------------
-		SPVDecl			_spVDecl;
+		UPVDecl			_spVDecl;
 		HLVb			_vBuffer[VData::MAX_STREAM];
 		HLIb			_iBuffer;
 		using TPID = boost::optional<int>;
@@ -253,7 +253,7 @@ class GLEffect : public IGLResource {
 
 		//! 頂点宣言
 		/*! \param[in] decl 頂点定義クラスのポインタ(定数を前提) */
-		void setVDecl(const SPVDecl& decl);
+		void setVDecl(UPVDecl&& decl);
 		void setVStream(HVb vb, int n);
 		void setIStream(HIb ib);
 		//! Tech指定
