@@ -261,19 +261,14 @@ class GLRes : public spn::ResMgrN<UPResource, GLRes> {
 		LHdl _common(const QString& key, std::function<UPResource()> cb);
 };
 
-#define DEF_HANDLE(suffix, sp) \
-	using HL##suffix = GLRes::AnotherLHandle<sp>; \
-	using H##suffix = GLRes::AnotherSHandle<sp>; \
-	using W##suffix = GLRes::AnotherWHandle<sp>;
-DEF_HANDLE(Tex, UPTexture)
-DEF_HANDLE(Vb, UPVBuffer)
-DEF_HANDLE(Ib, UPIBuffer)
-DEF_HANDLE(Buff, UPBuffer)
-DEF_HANDLE(Prog, UPProg)
-DEF_HANDLE(Sh, UPShader)
-DEF_HANDLE(Fx, UPEffect)
-DEF_HANDLE(Res, UPResource)
-#undef DEF_HANDLE
+DEF_HANDLE(GLRes, Tex, UPTexture)
+DEF_HANDLE(GLRes, Vb, UPVBuffer)
+DEF_HANDLE(GLRes, Ib, UPIBuffer)
+DEF_HANDLE(GLRes, Buff, UPBuffer)
+DEF_HANDLE(GLRes, Prog, UPProg)
+DEF_HANDLE(GLRes, Sh, UPShader)
+DEF_HANDLE(GLRes, Fx, UPEffect)
+DEF_HANDLE(GLRes, Res, UPResource)
 
 //! GLSLプログラムクラス
 class GLProgram : public IGLResource {

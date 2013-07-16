@@ -24,7 +24,7 @@ SOURCES += main.cpp\
 	openglwindow.cpp \
 	glx_parse2.cpp \
 	glassert.cpp \
-    glresource.cpp
+	glresource.cpp
 
 HEADERS  += mainwindow.h \
 	glext.h \
