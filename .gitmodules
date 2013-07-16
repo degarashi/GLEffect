@@ -3,4 +3,7 @@
 	url = /home/slice/projects/spinner
 [submodule "gleffect/spinner"]
 	path = gleffect/spinner
-	url = /home/slice/projects/spinner
+	url = /media/fps/Dropbox/git_repo/spinner
+[submodule "gleffect/boomstick"]
+	path = gleffect/boomstick
+	url = /media/fps/Dropbox/git_repo/boomstick/

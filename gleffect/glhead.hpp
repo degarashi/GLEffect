@@ -2,6 +2,7 @@
 
 #include <GL/gl.h>
 #include <GL/glx.h>
+#undef Convex
 #include "glext.h"
 #include "glxext.h"
 #define GLDEFINE(name,type)		extern type name;

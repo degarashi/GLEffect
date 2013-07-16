@@ -42,7 +42,9 @@ FORMS    += mainwindow.ui
 CONFIG += c++11
 QMAKE_CXXFLAGS_DEBUG += -DDEBUG -ggdb3 -Wno-sequence-point -Wno-unused-parameter -Wno-unused-variable
 QMAKE_CXX = 'clang++'
-QMAKE_LINK = clang++
-LIBS += -lGLU -lspinner
-QMAKE_LIBDIR += /tmp/spinner_build/
-QMAKE_INCDIR += ./spinner/
+QMAKE_LINK = 'clang++'
+LIBS += -lGLU -lboomstick -lspinner -lboost_system
+QMAKE_LIBDIR += /tmp/spinner_build/ \
+				/tmp/boomstick_build/
+QMAKE_INCDIR += ./boomstick/ \
+				./spinner/
