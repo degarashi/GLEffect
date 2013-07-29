@@ -57,39 +57,20 @@ void Center::resist(RForce::F &acc, const Rigid &r, int /*index*/, const CResult
 	acc.linear += -p.getOffset() * 0.9f;
 }
 
-Actor::Actor() {
+Actor::Actor(HMdl hMdl) {
 	_init();
-
-	// モデルハンドル作成
-	constexpr float sx = 0.5f,
-					sy = 0.3f;
-	ConvexModel* c0 = ConvexModel::New({Vec2(0,0), Vec2(0,sy), Vec2(sx,sy), Vec2(sx,0)});
-//	((boom::Cache<ConvexCore>*)c0)->setCacheRatio(3.5f, TagArea());
-//	((boom::Cache<ConvexCore>*)c0)->setCacheRatio(3.5f, TagInertia());
-	// 重心を中心点に据える
-	Vec2 ofs0 = c0->getCenter();
-	c0->addOffset(-ofs0);
-	HLMdl hlC0 = mgr_rigidgl.acquireModel(c0);
-	_hlRig = mgr_rigidgl.acquireRigid(Rigid::New(hlC0));
+	_hlRig = mgr_rigidgl.acquireRigid(Rigid::New(hMdl));
 
 	// 剛体ハンドル作成
-	auto spGrav = IResist::sptr(new resist::Gravity(Vec2(0,-7.f)));
-	_hlRig.ref()->addR(spGrav);
 	auto spImp = IResist::sptr(new resist::Impact());
 	_hlRig.ref()->addR(spImp);
-	auto spAir = IResist::sptr(new resist::Air(0.01f, 0.01f));
-	_hlRig.ref()->addR(spAir);
-//	_hlRig.ref()->addR(IResist::sptr(new Center()));
-
 	_rmID = mgr_rigidgl.addA(_hlRig.get());
 }
 
-Actor::Actor(const spn::Pose2D& ps): Actor() {
+Actor::Actor(HMdl hMdl, const spn::Pose2D& ps): Actor(hMdl) {
 	RPose& rp = _hlRig.ref()->refPose();
 	static_cast<spn::Pose2D&>(rp) = ps;
 	_hlRig.ref()->refPose().setOfs(ps.getOffset());
-//	_hlRig.ref()->refPose().setVelocity(Vec2(2,2));
-//	_hlRig.ref()->refPose().setRotVel(10.f);
 }
 
 void Actor::update(float /*dt*/) {
@@ -112,10 +93,18 @@ void Actor::draw(GLEffect* glf, MStack& ms) {
 
 	ms.pop();
 }
+HRig Actor::getHRig() const { return _hlRig.get(); }
 
-TestGL::TestGL() {}
+TestGL::TestGL(): _spGrav(new resist::Gravity), _spAir(new resist::Air) {}
 TestGL::~TestGL() {
-//	mgr_rigidgl.remA(_rmID);
+	_release();
+}
+void TestGL::_release() {
+	if(_rmID[0] != invalid) {
+		for(auto id : _rmID)
+			mgr_rigidgl.remB(id);
+		_rmID[0] = invalid;
+	}
 }
 
 void TestGL::initialize() {
@@ -144,13 +133,54 @@ void TestGL::initialize() {
 	GL_ACheck()
 	pFx->setUniform(spn::Vec4{1,2,3,4}, pFx->getUniformID("lowVal"));
 
+	resetScene();
+}
+void TestGL::render() {
+	glClearColor(0,0,0.5f, 1.0f);
+	glClearDepth(1.0f);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	int w = width(),
+		h = height();
+	glViewport(0,0,w,h);
+
+	_mstack.clear();
+	_mstack.push(spn::Mat44::PerspectiveFovLH(spn::DEGtoRAD(90), float(w)/h, 0.01f, 100.0f));
+
+	for(int i=0 ; i<_nIter ; i++)
+		mgr_rigidgl.simulate(_dt/_nIter);
+	for(auto& sp : _updL)
+		sp->update(_dt);
+	auto* pFx = _hlFx.ref().get();
+	for(auto& sp : _drawL)
+		sp->draw(pFx, _mstack);
+}
+void TestGL::resetScene() {
+	_release();
+	_updL.clear();
+	_drawL.clear();
+
 	using spn::Vec2;
 	using spn::Pose2D;
+	if(!_hlMdl.valid()) {
+		// モデルハンドル作成
+		constexpr float sx = 0.5f,
+						sy = 0.3f;
+		ConvexModel* c0 = ConvexModel::New({Vec2(0,0), Vec2(0,sy), Vec2(sx,sy), Vec2(sx,0)});
+		// 重心を中心点に据える
+		Vec2 ofs0 = c0->getCenter();
+		c0->addOffset(-ofs0);
+		_hlMdl = mgr_rigidgl.acquireModel(c0);
+		_pMdl = c0;
+	}
 
-	for(int i=0 ; i<8 ; i++) {
-		SPActor sp(Actor::New(Pose2D{Vec2(i*0.0f,i*0.31f), spn::DEGtoRAD(0.f), Vec2(1,1)}));
+	// 箱を用意
+	for(int i=0 ; i<_nBox ; i++) {
+		SPActor sp(Actor::New(_hlMdl.get(), Pose2D{Vec2(i*0.0f,i*0.31f), spn::DEGtoRAD(0.f), Vec2(1,1)}));
 		_updL.push_back(sp);
 		_drawL.push_back(sp);
+		auto& tmp = sp->getHRig().ref();
+		tmp->addR(_spGrav);
+		tmp->addR(_spAir);
 	}
 	PointL pl[3] = {
 		{Vec2(-2,-0.9f), Vec2(2,-0.9f), Vec2(2,-2), Vec2(-2,-2)},
@@ -168,24 +198,22 @@ void TestGL::initialize() {
 		_hlFloor[i].ref()->setOfs(cen);
 	}
 }
-void TestGL::render() {
-	glClearColor(0,0,1.0f, 1.0f);
-	glClearDepth(1.0f);
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	int w = width(),
-		h = height();
-	glViewport(0,0,w,h);
-
-	_mstack.clear();
-	_mstack.push(spn::Mat44::PerspectiveFovLH(spn::DEGtoRAD(90), float(w)/h, 0.01f, 100.0f));
-
-	const float dt = 0.01f;
-	const int iter = 5;
-	for(int i=0 ; i<iter ; i++)
-		mgr_rigidgl.simulate(dt/iter);
-	for(auto& sp : _updL)
-		sp->update(dt);
-	auto* pFx = _hlFx.ref().get();
-	for(auto& sp : _drawL)
-		sp->draw(pFx, _mstack);
+void TestGL::changeEnv(const SimEnv& e) {
+	_spGrav->setGravity(e.gravity);
+	_spAir->setAir(e.air.x, e.air.y);
+}
+void TestGL::changeCoeff(const boom::RCoeff& c) {
+	mgr_rigidgl.setCoeff(c);
+}
+void TestGL::changeInitial(const SimInitial& in) {
+	_nBox = in.nbox;
+	_nIter = in.nIter;
+	if(_hlMdl.valid()) {
+		auto cnv = static_cast<boom::Cache<ConvexCore>*>(_pMdl);
+		cnv->setCacheRatio(in.mass, TagArea());
+		cnv->setCacheRatio(in.inertia, TagInertia());
+	}
+}
+void TestGL::mousePressEvent(QMouseEvent* e) {
+	emit mousePressEv(e);
 }

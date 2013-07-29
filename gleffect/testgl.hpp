@@ -40,11 +40,12 @@ class Actor : public IDraw, public IUpdate, public spn::CheckAlign<16,Actor> {
 	void _init();
 
 	public:
-		Actor();
-		Actor(const spn::Pose2D& ps);
+		Actor(boom::geo2d::HMdl hMdl);
+		Actor(boom::geo2d::HMdl hMdl, const spn::Pose2D& ps);
 		~Actor();
 		void draw(GLEffect* glf, MStack& ms) override;
 		void update(float dt) override;
+		boom::geo2d::HRig getHRig() const;
 };
 using SPUpdate = std::shared_ptr<IUpdate>;
 using SPDraw = std::shared_ptr<IDraw>;
@@ -55,14 +56,36 @@ class TestGL : public OpenGLWindow {
 	HLFx	_hlFx;
 	MStack	_mstack;
 	boom::geo2d::HLRig		_hlFloor[3];
-	uint32_t				_rmID[3];
+	constexpr static uint32_t invalid = ~0;
+	uint32_t				_rmID[3] = {invalid};
 
 	std::vector<SPUpdate>	_updL;
 	std::vector<SPDraw>		_drawL;
+	constexpr static float	_dt = 0.01f;
+	int						_nBox=3, _nIter=5;
+	boom::geo2d::HLMdl		_hlMdl;
+	boom::geo2d::ConvexModel*	_pMdl;
 
+	using SPGrav = std::shared_ptr<boom::geo2d::resist::Gravity>;
+	using SPAir = std::shared_ptr<boom::geo2d::resist::Air>;
+	SPGrav					_spGrav;
+	SPAir					_spAir;
+
+	void _release();
+
+	protected:
+		void mousePressEvent(QMouseEvent* e) override;
 	public:
 		TestGL();
 		~TestGL();
 		void initialize() override;
 		void render() override;
+
+	signals:
+		void mousePressEv(QMouseEvent* e);
+	public slots:
+		void resetScene();
+		void changeEnv(const SimEnv& e);
+		void changeCoeff(const boom::RCoeff& c);
+		void changeInitial(const SimInitial& in);
 };
