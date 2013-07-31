@@ -406,21 +406,21 @@ namespace {
 		void operator()(float v) const { glUniform1f(_id, v); }
 		void operator()(const spn::Vec3& v) const { glUniform3fv(_id, 1, v.m); }
 		void operator()(const spn::Vec4& v) const { glUniform4fv(_id, 1, v.m);}
-		void operator()(const spn::AMat32& m) const { (*this)(static_cast<const spn::Mat32&>(m));}
+		void operator()(const spn::AMat32& m) const { this->operator()(reinterpret_cast<const spn::Mat32&>(m));}
 		void operator()(const spn::Mat32& m) const {
 			auto m3 = m.convert33();
 			(*this)(m3);
 		}
-		void operator()(const spn::AMat33& m) const { (*this)(static_cast<const spn::Mat33&>(m)); }
+		void operator()(const spn::AMat33& m) const { this->operator()(reinterpret_cast<const spn::Mat33&>(m)); }
 		void operator()(const spn::Mat33& m) const {
 			glUniformMatrix3fv(_id, 1, true, reinterpret_cast<const GLfloat*>(m.ma));
 		}
-		void operator()(const spn::AMat43& m) const { (*this)(static_cast<const spn::Mat43&>(m)); }
+		void operator()(const spn::AMat43& m) const { this->operator()(reinterpret_cast<const spn::Mat43&>(m)); }
 		void operator()(const spn::Mat43& m) const {
 			auto m4 = m.convert44();
 			(*this)(m4);
 		}
-		void operator()(const spn::AMat44& m) const { (*this)(static_cast<const spn::Mat44&>(m)); }
+		void operator()(const spn::AMat44& m) const { this->operator()(reinterpret_cast<const spn::Mat44&>(m)); }
 		void operator()(const spn::Mat44& m) const {
 			glUniformMatrix4fv(_id, 1, true, reinterpret_cast<const GLfloat*>(m.ma));
 		}

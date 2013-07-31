@@ -70,13 +70,14 @@ Actor::Actor(HMdl hMdl) {
 Actor::Actor(HMdl hMdl, const spn::Pose2D& ps): Actor(hMdl) {
 	RPose& rp = _hlRig.ref()->refPose();
 	static_cast<spn::Pose2D&>(rp) = ps;
+	rp.setAccel(Vec2(0,0));
+	rp.setRotAccel(0);
+	rp.setVelocity(Vec2(0,0));
+	rp.setRotVel(0);
 	_hlRig.ref()->refPose().setOfs(ps.getOffset());
 }
 
-void Actor::update(float /*dt*/) {
-	auto& m = _hlRig.ref()->refPose().getToWorld();
-	auto m2 = m;
-}
+void Actor::update(float /*dt*/) {}
 void Actor::draw(GLEffect* glf, MStack& ms) {
 	auto& m = _hlRig.ref()->refPose().getToWorld();
 	ms.push(m.convert44());
