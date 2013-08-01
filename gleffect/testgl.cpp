@@ -59,7 +59,7 @@ void Center::resist(RForce::F &acc, const Rigid &r, int /*index*/, const CResult
 
 Actor::Actor(HMdl hMdl) {
 	_init();
-	_hlRig = mgr_rigidgl.acquireRigid(Rigid::New(hMdl));
+	_hlRig = mgr_rigidgl.acquireRigid(Rigid::NewUF(hMdl));
 
 	// 剛体ハンドル作成
 	auto spImp = IResist::sptr(new resist::Impact());
@@ -166,17 +166,17 @@ void TestGL::resetScene() {
 		// モデルハンドル作成
 		constexpr float sx = 0.5f,
 						sy = 0.3f;
-		ConvexModel* c0 = ConvexModel::New({Vec2(0,0), Vec2(0,sy), Vec2(sx,sy), Vec2(sx,0)});
+		auto c0 = ConvexModel::NewUF({Vec2(0,0), Vec2(0,sy), Vec2(sx,sy), Vec2(sx,0)});
 		// 重心を中心点に据える
 		Vec2 ofs0 = c0->getCenter();
 		c0->addOffset(-ofs0);
-		_hlMdl = mgr_rigidgl.acquireModel(c0);
-		_pMdl = c0;
+		_pMdl = c0.get();
+		_hlMdl = mgr_rigidgl.acquireModel(std::move(c0));
 	}
 
 	// 箱を用意
 	for(int i=0 ; i<_nBox ; i++) {
-		SPActor sp(Actor::New(_hlMdl.get(), Pose2D{Vec2(i*0.0f,i*0.31f), spn::DEGtoRAD(0.f), Vec2(1,1)}));
+		SPActor sp(Actor::NewS(_hlMdl.get(), Pose2D{Vec2(i*0.0f,i*0.31f), spn::DEGtoRAD(0.f), Vec2(1,1)}));
 		_updL.push_back(sp);
 		_drawL.push_back(sp);
 		auto& tmp = sp->getHRig().ref();
@@ -190,11 +190,11 @@ void TestGL::resetScene() {
 	};
 	for(int i=0 ; i<3 ; i++) {
 		// 床を用意
-		ConvexModel* c0 = ConvexModel::New(pl[i]);
+		auto c0 = ConvexModel::NewUF(pl[i]);
 		auto cen = c0->getCenter();
 		c0->addOffset(-cen);
-		HLMdl hlC0 = mgr_rigidgl.acquireModel(c0);
-		_hlFloor[i] = mgr_rigidgl.acquireRigid(Rigid::New(hlC0));
+		HLMdl hlC0 = mgr_rigidgl.acquireModel(std::move(c0));
+		_hlFloor[i] = mgr_rigidgl.acquireRigid(Rigid::NewUF(hlC0));
 		_rmID[i] = mgr_rigidgl.addB(_hlFloor[i].get());
 		_hlFloor[i].ref()->setOfs(cen);
 	}
