@@ -2,6 +2,7 @@
 #include <memory>
 #include <vector>
 #include <GL/gl.h>
+#include "glext.h"
 
 struct IGLResource;
 using UPResource = std::unique_ptr<IGLResource>;

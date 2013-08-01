@@ -5,10 +5,17 @@
 #include "glfunc.inc"
 #undef GLDEFINE
 
+#if defined(_WIN32)
+	#include <windows.h>
+	#define GLGETPROC(name) wglGetProcAddress((LPCSTR)#name)
+#else
+	#define GLGETPROC(name) glXGetProcAddress((const GLubyte*)#name)
+#endif
+
 // OpenGL関数ロード
-#define GLDEFINE(name,type)		name = (type)glXGetProcAddress((const GLubyte*)#name); \
+#define GLDEFINE(name,type)		name = (type)GLGETPROC(name); \
 		if(!name) throw std::runtime_error(std::string("error on loading GL function \"") + #name + '\"');
-	void LoadXGLFunc() {
+	void LoadGLFunc() {
 		#include "glfunc.inc"
 	}
 #undef GLDEFINE

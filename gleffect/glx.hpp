@@ -12,7 +12,7 @@
 //! OpenGLの値設定関数代理クラス
 struct ValueSettingR;
 using VSFunc = void (*)(const ValueSettingR&);
-using VBFunc = void (*)(GLenum);
+using VBFunc = decltype(&glEnable);
 struct ValueSettingR {
 	ValueSetting::ValueT 	value[4];
 	VSFunc					func;
