@@ -65,8 +65,8 @@ struct IGLResource {
 struct GLE_Error : std::runtime_error {
 	using runtime_error::runtime_error;
 };
-using GLGetIV = void (*)(GLuint, GLenum, GLint*);
-using GLInfoFunc = void (*)(GLuint, GLsizei, GLsizei*, GLchar*);
+using GLGetIV = decltype(glGetShaderiv);
+using GLInfoFunc = decltype(glGetShaderInfoLog);
 //! GLSLコンパイル関連のエラー基底
 struct GLE_ShProgBase : GLE_Error {
 	GLE_ShProgBase(GLGetIV ivF, GLInfoFunc infoF, const std::string& aux, GLuint id);

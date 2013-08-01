@@ -66,7 +66,7 @@ void OpenGLWindow::renderNow() {
 	_context->makeCurrent(this);
 	if(needInit) {
 		// OpenGL関数群を読み込む
-		LoadXGLFunc();
+		LoadGLFunc();
 		initialize();
 	}
 

@@ -1,11 +1,16 @@
 #pragma once
 
 #include <GL/gl.h>
-#include <GL/glx.h>
+#if !defined(_WIN32)
+	#include <GL/glx.h>
+#endif
+#undef Convex
 #include "glext.h"
-#include "glxext.h"
+#if !defined(_WIN32)
+	#include "glxext.h"
+#endif
 #define GLDEFINE(name,type)		extern type name;
 #include "glfunc.inc"
 #undef GLDEFINE
 
-extern void LoadXGLFunc();
+extern void LoadGLFunc();
