@@ -267,6 +267,9 @@ void TestGL::render() {
 		sp->draw(pFx, _mstack);
 }
 void TestGL::resetScene() {
+	mgr_gl.onDeviceLost();
+	mgr_gl.onDeviceReset();
+
 	_release();
 	_updL.clear();
 	_drawL.clear();
