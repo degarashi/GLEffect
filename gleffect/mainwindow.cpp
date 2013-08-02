@@ -13,7 +13,7 @@ MainWindow::MainWindow(QWidget *parent): QMainWindow(parent),
 
 	QSurfaceFormat fmt;
 	fmt.setSamples(0);
-
+	fmt.setSwapBehavior(QSurfaceFormat::DoubleBuffer);
 	_view->setFormat(fmt);
 	_view->resize(800, 600);
 	_view->setPosition(256,256);
