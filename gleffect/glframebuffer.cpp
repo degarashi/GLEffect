@@ -28,7 +28,7 @@ GLRBuffer::Inner1& GLRBuffer::allocate() {
 }
 
 namespace {
-	void Nothing(...) {}
+	void Nothing(GLFBufferTmp&, GLRBuffer&) {}
 }
 const GLRBuffer::F_LOST GLRBuffer::cs_onLost[] = {
 	Nothing,		// NONE

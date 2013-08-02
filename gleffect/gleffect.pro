@@ -55,10 +55,14 @@ FORMS    += mainwindow.ui
 
 CONFIG += c++11
 QMAKE_CXXFLAGS_DEBUG += -DDEBUG -ggdb3 -Wno-sequence-point -Wno-unused-parameter -Wno-unused-variable
-QMAKE_CXX = 'clang++'
-QMAKE_LINK = 'clang++'
-LIBS += -lGLU -lboomstick -lspinner -lboost_system -lboost_regex
+QMAKE_CXXFLAGS += -D_WIN32 -O3 -msse2
+QMAKE_CXX = 'i386-mingw32-g++'
+QMAKE_LINK = 'i386-mingw32-g++'
+QMAKE_AR_CMD = 'i386-mingw32-ar'
+LIBS += -lboomstick -lspinner -lboost_system -lboost_regex -lglu32 -lopengl32
 QMAKE_LIBDIR += /tmp/spinner_build/ \
-				/tmp/boomstick_build/
+				/tmp/boomstick_build/ \
+				/home/slice/local/lib/
 QMAKE_INCDIR += ./boomstick/ \
-				./spinner/
+				./spinner/ \
+				/home/slice/local/include/

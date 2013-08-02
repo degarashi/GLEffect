@@ -34,7 +34,7 @@ struct GLDiffID {
 	union {
 		uint32_t		value;
 		struct {
-			GL16ID		fromID, toID;
+			uint16_t	fromID, toID;
 		};
 	};
 	GLDiffID() {}
