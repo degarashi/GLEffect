@@ -8,8 +8,21 @@
 #if defined(_WIN32)
 	#include <windows.h>
 	#define GLGETPROC(name) wglGetProcAddress((LPCSTR)#name)
+	void SetSwapInterval(int n) {
+		using SF = bool APIENTRY (*)(int);
+		using GF = int APIENTRY (*)();
+		SF ff = (SF)wglGetProcAddress("wglSwapIntervalEXT");
+		GF gf = (GF)wglGetProcAddress("wglGetSwapIntervalEXT");
+		ff(n);
+		gf();
+	}
 #else
 	#define GLGETPROC(name) glXGetProcAddress((const GLubyte*)#name)
+	void SetSwapInterval(int n) {
+		using SF = void (*)(int);
+		SF sf = (SF)GLGETPROC(glXSwapIntervalSGI);
+		sf(n);
+	}
 #endif
 
 // OpenGL関数ロード

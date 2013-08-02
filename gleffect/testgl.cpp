@@ -137,6 +137,7 @@ void TestGL::initialize() {
 	pFx->setUniform(spn::Vec4{1,2,3,4}, pFx->getUniformID("lowVal"));
 
 	resetScene();
+	SetSwapInterval(0);
 }
 void TestGL::render() {
 	glClearColor(0,0,0.5f, 1.0f);
