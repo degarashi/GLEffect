@@ -9,6 +9,7 @@
 #include "spinner/pose.hpp"
 #include "boomstick/rigid2D.hpp"
 
+extern QString BASE_PATH;
 // -------------- 間に合わせ実装。後でちゃんとした物にする --------------
 using MStack = spn::MatStack<spn::Mat44, spn::MatStackTag::PushLeft>;
 struct IDraw {

@@ -3,6 +3,8 @@
 #include <QDir>
 #include "testgl.hpp"
 
+QString BASE_PATH("./data");
+
 Actor::~Actor() {
 	mgr_rigidgl.remA(_rmID);
 }
@@ -47,7 +49,7 @@ void Actor::_init() {
 	_hlIb.ref()->initData(tmpI, countof(tmpI));
 
 	// テクスチャmgr_gl読み込み
-	_hlTex = mgr_gl.loadTexture("sample.png", false);
+	_hlTex = mgr_gl.loadTexture(QString(BASE_PATH) + "/sample.png", false);
 //	_tex.reset(new TexDebug(new TDChecker(spn::Vec4(1,1,1,1), spn::Vec4(0,0,0,0), 24,24,256,256), false));
 	_hlTex.ref()->setFilter(false,false);
 }
@@ -109,7 +111,7 @@ void TestGL::_release() {
 }
 
 void TestGL::initialize() {
-	_hlFx = mgr_gl.loadEffect("test.glx");
+	_hlFx = mgr_gl.loadEffect(QString(BASE_PATH) + "/test.glx");
 	std::cout	<< "OpenGL Version: " << ::glGetString(GL_VERSION) << std::endl
 				<< "OpenGL Vendor: " << ::glGetString(GL_VENDOR) << std::endl
 				<< "OpenGL Renderer: " << ::glGetString(GL_RENDERER) << std::endl
