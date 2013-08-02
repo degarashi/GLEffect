@@ -3,7 +3,7 @@
 #include <QDir>
 #include "testgl.hpp"
 
-QString BASE_PATH("./data");
+QString BASE_PATH("/usr/share/rigid2d-test");
 
 Actor::~Actor() {
 	mgr_rigidgl.remA(_rmID);
