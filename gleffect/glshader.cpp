@@ -7,29 +7,41 @@
 
 #if defined(_WIN32)
 	#include <windows.h>
+	namespace {
+		using SetSwapInterval_t = bool APIENTRY (*)(int);
+		SetSwapInterval_t g_setswapinterval = nullptr;
+	}
 	#define GLGETPROC(name) wglGetProcAddress((LPCSTR)#name)
-	void SetSwapInterval(int n) {
-		using SF = bool APIENTRY (*)(int);
-		using GF = int APIENTRY (*)();
-		SF ff = (SF)wglGetProcAddress("wglSwapIntervalEXT");
-		GF gf = (GF)wglGetProcAddress("wglGetSwapIntervalEXT");
-		ff(n);
-		gf();
+	void LoadGLAux() {
+		g_setswapinterval = (SetSwapInterval_t)wglGetProcAddress("wglSwapIntervalEXT");
 	}
 #else
+	namespace {
+		using SetSwapInterval_t = void APIENTRY (*)(int);
+		SetSwapInterval_t g_setswapinterval = nullptr;
+	}
 	#define GLGETPROC(name) glXGetProcAddress((const GLubyte*)#name)
-	void SetSwapInterval(int n) {
-		using SF = void (*)(int);
-		SF sf = (SF)GLGETPROC(glXSwapIntervalSGI);
-		sf(n);
+	void LoadGLAux() {
+		// EXTかSGIのどちらかが存在する事を期待
+		try {
+			g_setswapinterval = (SetSwapInterval_t)GLGETPROC(glXSwapIntervalSGI);
+		} catch(const std::runtime_error& e) {
+			g_setswapinterval = (SetSwapInterval_t)GLGETPROC(glXSwapIntervalEXT);
+		}
 	}
 #endif
+void SetSwapInterval(int n) {
+	g_setswapinterval(n);
+}
 
 // OpenGL関数ロード
 #define GLDEFINE(name,type)		name = (type)GLGETPROC(name); \
 		if(!name) throw std::runtime_error(std::string("error on loading GL function \"") + #name + '\"');
 	void LoadGLFunc() {
+		// 各種API関数
 		#include "glfunc.inc"
+		// その他OS依存なAPI関数
+		LoadGLAux();
 	}
 #undef GLDEFINE
 
