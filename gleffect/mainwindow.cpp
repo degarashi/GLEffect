@@ -1,9 +1,10 @@
-#include <QMouseEvent>
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 #include "testgl.hpp"
 #include "boomstick/collision.hpp"
 
+using namespace spn;
+using namespace boom::geo2d;
 MainWindow::MainWindow(QWidget *parent): QMainWindow(parent),
 	_spUI(std::make_shared<Ui::MainWindow>()),
 	_view(std::make_shared<TestGL>())
@@ -26,7 +27,6 @@ MainWindow::MainWindow(QWidget *parent): QMainWindow(parent),
 	connect(this, SIGNAL(sigCoeff(boom::RCoeff)), _view.get(), SLOT(changeCoeff(boom::RCoeff)));
 	connect(this, SIGNAL(sigEnv(SimEnv)), _view.get(), SLOT(changeEnv(SimEnv)));
 	connect(this, SIGNAL(sigInitial(SimInitial)), _view.get(), SLOT(changeInitial(SimInitial)));
-	connect(_view.get(), SIGNAL(mousePressEv(QMouseEvent*)), this, SLOT(viewMousePressEv(QMouseEvent*)));
 
 	// 初期値を設定
 	changeCoeff();
@@ -56,8 +56,4 @@ void MainWindow::changeInitial() {
 	in.mass = _spUI->spinMassLinear->value();
 	in.inertia = _spUI->spinMassRot->value();
 	emit sigInitial(in);
-}
-void MainWindow::viewMousePressEv(QMouseEvent* e) {
-	if(e->button() == Qt::LeftButton) {
-	}
 }

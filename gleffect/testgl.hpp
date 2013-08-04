@@ -24,9 +24,31 @@ class RigidMgrGL : public boom::geo2d::RigidRes, public boom::geo2d::RigidMgr {
 	public:
 		using RigidMgr::RigidMgr;
 };
-class Center : public boom::geo2d::IResist {
+//! 点ジョイント
+class Joint : public boom::geo2d::IResist {
+	spn::Vec2 _lcFrom = spn::Vec2(0),	//! ジョイント元座標(ローカル)
+				_wTo = spn::Vec2(0);	//! ジョイント先(グローバル)
+	bool	_bEnable = false;
 	public:
+		void setLcFrom(const spn::Vec2& from);
+		void setTo(const spn::Vec2& to);
+		void setEnable(bool b);
 		void resist(boom::geo2d::RForce::F& acc, const boom::geo2d::Rigid& r, int index, const boom::geo2d::CResult& cr) const override;
+};
+//! 矢印ポリゴン
+class Arrow : public IDraw {
+	HLVb	_hlVb;
+	HLIb	_hlIb;
+	HLTex	_hlTex;
+	float	_width = 0.02f;
+	spn::Vec2	_vFrom = spn::Vec2(0),
+				_vTo = spn::Vec2(0);
+
+	public:
+		Arrow();
+		void setFrom(const spn::Vec2& v);
+		void setTo(const spn::Vec2& v);
+		void draw(GLEffect* glf, MStack& ms) override;
 };
 
 //! 四角ポリゴン表示
@@ -60,33 +82,52 @@ class TestGL : public OpenGLWindow {
 	constexpr static uint32_t invalid = ~0;
 	uint32_t				_rmID[3] = {invalid};
 
-	std::vector<SPUpdate>	_updL;
-	std::vector<SPDraw>		_drawL;
+	spn::noseq_list<SPUpdate, uint32_t>	_updL;
+	spn::noseq_list<SPDraw, uint32_t>	_drawL;
 	constexpr static float	_dt = 0.01f;
 	int						_nBox=3, _nIter=5;
-	boom::geo2d::HLMdl		_hlMdl;
+	boom::geo2d::HLMdl			_hlMdl;
 	boom::geo2d::ConvexModel*	_pMdl;
 
 	using SPGrav = std::shared_ptr<boom::geo2d::resist::Gravity>;
 	using SPAir = std::shared_ptr<boom::geo2d::resist::Air>;
+	using SPArrow = std::shared_ptr<Arrow>;
+	using SPJoint = std::shared_ptr<Joint>;
 	SPGrav					_spGrav;
 	SPAir					_spAir;
+	SPArrow					_spArrow;
+	uint32_t				_arrowID;
+	SPJoint					_spJoint;
+	//! grab中のboxハンドル
+	boom::geo2d::HRig		_hRig;
+	//! grabしている物体のローカル位置
+	spn::Vec2				_lcPos;
+
+	//! 前回フレームのビューサイズ
+	float		_widthH = 320,
+				_heightH = 240;
+	//! 前回フレームの射影行列
+	spn::Mat44	_invP;
 
 	void _release();
 
 	protected:
 		void mousePressEvent(QMouseEvent* e) override;
+		void mouseMoveEvent(QMouseEvent* e) override;
+		void mouseReleaseEvent(QMouseEvent* e) override;
 	public:
 		TestGL();
 		~TestGL();
 		void initialize() override;
 		void render() override;
+		spn::Vec2 qtposToWorld(const spn::Vec2& pos);
 
-	signals:
-		void mousePressEv(QMouseEvent* e);
 	public slots:
 		void resetScene();
 		void changeEnv(const SimEnv& e);
 		void changeCoeff(const boom::RCoeff& c);
 		void changeInitial(const SimInitial& in);
+
+		boom::geo2d::HRig getBox(const spn::Vec2& pos);
+		spn::noseq_list<SPDraw, uint32_t>& refDrawList();
 };

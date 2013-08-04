@@ -46,9 +46,8 @@ struct SimEnv {
 	spn::Vec2	gravity,
 				air;
 };
-namespace boom {
-	struct RCoeff;
-}
+
+#include "boomstick/rigid2D.hpp"
 class TestGL;
 //! メイン兼コントロールパネルウィンドウ
 class MainWindow : public QMainWindow {
@@ -62,7 +61,6 @@ class MainWindow : public QMainWindow {
 		void changeCoeff();
 		void changeEnv();
 		void changeInitial();
-		void viewMousePressEv(QMouseEvent* e);
 	signals:
 		void sigCoeff(const boom::RCoeff& c);
 		void sigEnv(const SimEnv& e);

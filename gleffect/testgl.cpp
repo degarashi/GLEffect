@@ -1,39 +1,137 @@
 #include <QMessageBox>
 #include <QApplication>
 #include <QDir>
+#include <QMouseEvent>
 #include "testgl.hpp"
+#include "spinner/plane.hpp"
 
 QString BASE_PATH("./data");
+
+using namespace boom::geo2d;
+using namespace spn;
+// ----------------------- Joint -----------------------
+void Joint::setLcFrom(const Vec2& from) {
+	_lcFrom = from;
+}
+void Joint::setTo(const Vec2& to) {
+	_wTo = to;
+}
+void Joint::setEnable(bool b) {
+	_bEnable = b;
+}
+void Joint::resist(RForce::F &acc, const Rigid &r, int /*index*/, const CResult& /*cr*/) const {
+	constexpr float maxlen = 0.3f;
+	if(_bEnable) {
+		Vec2 wfrom = r.toWorld(_lcFrom);
+		Vec2 v = _wTo - wfrom;
+		float len = v.length();
+		if(len < 1e-6f)
+			return;
+		v /= len;
+		float spr = 0;
+		const boom::geo2d::RPose& rp = r.getPose();
+		float dump = -v.dot(rp.getVelocAt(wfrom));
+		if(len > maxlen) {
+			dump = std::max(0.f, dump);
+			dump *= 10;
+			spr = std::max(0.f, len-maxlen) * 10;
+		} else if(len > maxlen-0.05f) {
+			dump *= 1;
+		}else {
+			dump *= 0;
+		}
+		RForce::F f = Rigid::CalcForce(r.getPose(), wfrom, v*(spr+dump));
+		acc += f;
+	}
+}
+
+struct TmpV {
+	Vec3 pos;
+	Vec4 tex;
+};
+// ----------------------- Arrow -----------------------
+Arrow::Arrow() {
+	_hlVb = mgr_gl.makeVBuffer(GL_DYNAMIC_DRAW);
+
+	GLubyte tmpI[] = {
+		0,1,2,
+		2,3,0
+	};
+	_hlIb = mgr_gl.makeIBuffer(GL_STATIC_DRAW);
+	_hlIb.ref()->initData(tmpI, countof(tmpI));
+
+	_hlTex = mgr_gl.loadTexture(QString(BASE_PATH) + "/sample.png", false);
+	_hlTex.ref()->setFilter(false,false);
+}
+void Arrow::setFrom(const spn::Vec2& v) {
+	_vFrom = v;
+}
+void Arrow::setTo(const spn::Vec2& v) {
+	_vTo = v;
+}
+void Arrow::draw(GLEffect* glf, MStack& ms) {
+	Vec2 to(_vTo - _vFrom);
+	float len = to.length();
+	if(len < 1e-5f)
+		return;
+	Vec2 toI = to * spn::_sseRcp22Bit(len),
+		ax = toI * boom::cs_mRot90[1];
+	const float f05 = _width * 0.5f,
+					z = 0.99f;
+	TmpV tmpV[] = {
+		{
+			(_vFrom+ax*f05).asVec3(z),
+			Vec4{0,1,0,0}
+		},
+		{
+			(_vTo+ax*f05).asVec3(z),
+			Vec4{0,0,0,0}
+		},
+		{
+			(_vTo+ax*-f05).asVec3(z),
+			Vec4{1,0,0,0}
+		},
+		{
+			(_vFrom+ax*-f05).asVec3(z),
+			Vec4{1,1,0,0}
+		}
+	};
+	_hlVb.ref()->initData(tmpV, countof(tmpV), sizeof(TmpV));
+
+	GLint id = glf->getUniformID("mTrans");
+	glf->setUniform(ms.top(), id);
+	id = glf->getUniformID("tDiffuse");
+	glf->setUniform(_hlTex, id);
+
+	glf->setVStream(_hlVb.get(), 0);
+	glf->setIStream(_hlIb.get());
+	glf->drawIndexed(GL_TRIANGLES, 6, 0);
+	GL_ACheck()
+}
 
 Actor::~Actor() {
 	mgr_rigidgl.remA(_rmID);
 }
 
 void Actor::_init() {
-	using spn::Vec3;
-	using spn::Vec4;
 	// 頂点定義
-	struct TmpV {
-		Vec3 pos;
-		Vec4 tex;
-	};
 	constexpr float sx = 0.5f/2,
 					sy = 0.3f/2;
 	TmpV tmpV[] = {
 		{
-			Vec3{-sx,-sy,0},
+			Vec3{-sx,-sy,1},
 			Vec4{0,1,0,0}
 		},
 		{
-			Vec3{-sx,sy,0},
+			Vec3{-sx,sy,1},
 			Vec4{0,0,0,0}
 		},
 		{
-			Vec3{sx,sy,0},
+			Vec3{sx,sy,1},
 			Vec4{1,0,0,0}
 		},
 		{
-			Vec3{sx,-sy,0},
+			Vec3{sx,-sy,1},
 			Vec4{1,1,0,0}
 		}
 	};
@@ -51,12 +149,7 @@ void Actor::_init() {
 	// テクスチャmgr_gl読み込み
 	_hlTex = mgr_gl.loadTexture(QString(BASE_PATH) + "/sample.png", false);
 //	_tex.reset(new TexDebug(new TDChecker(spn::Vec4(1,1,1,1), spn::Vec4(0,0,0,0), 24,24,256,256), false));
-	_hlTex.ref()->setFilter(false,false);
-}
-using namespace boom::geo2d;
-void Center::resist(RForce::F &acc, const Rigid &r, int /*index*/, const CResult& /*cr*/) const {
-	auto& p = r.getPose();
-	acc.linear += -p.getOffset() * 0.9f;
+	_hlTex.ref()->setFilter(true,true);
 }
 
 Actor::Actor(HMdl hMdl) {
@@ -136,10 +229,15 @@ void TestGL::initialize() {
 	GL_ACheck()
 	pFx->setUniform(spn::Vec4{1,2,3,4}, pFx->getUniformID("lowVal"));
 
+	_spArrow = std::make_shared<Arrow>();
+	_spJoint = std::make_shared<Joint>();
+
 	resetScene();
-	SetSwapInterval(0);
+	SetSwapInterval(1);
 }
 void TestGL::render() {
+	if(!_hlFx)
+		return;
 	glClearColor(0,0,0.5f, 1.0f);
 	glClearDepth(1.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -149,6 +247,15 @@ void TestGL::render() {
 
 	_mstack.clear();
 	_mstack.push(spn::Mat44::PerspectiveFovLH(spn::DEGtoRAD(90), float(w)/h, 0.01f, 100.0f));
+	_invP = _mstack.top();
+	_invP.invert();
+	_widthH = w * 0.5f;
+	_heightH = h * 0.5f;
+
+	if(_hRig) {
+		Vec2 wpos = _hRig.ref()->toWorld(_lcPos);
+		_spArrow->setFrom(wpos);
+	}
 
 	for(int i=0 ; i<_nIter ; i++)
 		mgr_rigidgl.simulate(_dt/_nIter);
@@ -180,8 +287,8 @@ void TestGL::resetScene() {
 	// 箱を用意
 	for(int i=0 ; i<_nBox ; i++) {
 		SPActor sp(Actor::NewS(_hlMdl.get(), Pose2D{Vec2(i*0.0f,i*0.31f), spn::DEGtoRAD(0.f), Vec2(1,1)}));
-		_updL.push_back(sp);
-		_drawL.push_back(sp);
+		_updL.add(sp);
+		_drawL.add(sp);
 		auto& tmp = sp->getHRig().ref();
 		tmp->addR(_spGrav);
 		tmp->addR(_spAir);
@@ -219,5 +326,75 @@ void TestGL::changeInitial(const SimInitial& in) {
 	}
 }
 void TestGL::mousePressEvent(QMouseEvent* e) {
-	emit mousePressEv(e);
+	if(e->button() == Qt::LeftButton) {
+		QPoint pt = e->pos();
+		Vec2 ptv(pt.x(), pt.y());
+		HRig hr = getBox(ptv);
+		ptv = qtposToWorld(ptv);
+		if(hr.valid()) {
+			Rigid& r = *hr.ref();
+			_lcPos = r.getPose().toLocal(ptv);
+			_spJoint->setLcFrom(_lcPos);
+			_spJoint->setTo(r.getPose().getOffset());
+			_spJoint->setEnable(true);
+			hr.ref()->addR(_spJoint, 0xbeef);
+			_arrowID = _drawL.add(_spArrow);
+			_spArrow->setFrom(ptv);
+			_spArrow->setTo(ptv);
+			_hRig = hr;
+		}
+	}
+}
+void TestGL::mouseMoveEvent(QMouseEvent* e) {
+	if(_hRig.valid()) {
+		Vec2 v(e->pos().x(), e->pos().y());
+		v = qtposToWorld(v);
+		_spJoint->setTo(v);
+		_spArrow->setTo(v);
+	}
+}
+void TestGL::mouseReleaseEvent(QMouseEvent* e) {
+	if(e->button() == Qt::LeftButton) {
+		if(_hRig) {
+			_spJoint->setEnable(false);
+			_drawL.rem(_arrowID);
+			_hRig.ref()->remR(0xbeef);
+			_hRig = HRig();
+		}
+	}
+}
+
+using namespace spn;
+HRig TestGL::getBox(const Vec2& pos) {
+	Vec2 tmp = qtposToWorld(pos);
+
+	for(auto itr=mgr_rigidgl.cbeginA() ; itr!=mgr_rigidgl.cendA() ; ++itr) {
+		const Rigid& r = *itr;
+		if(r.isInner(tmp))
+			return (*itr);
+	}
+	return HRig();
+}
+Vec2 TestGL::qtposToWorld(const spn::Vec2& pos) {
+	// qt -> screen
+	AVec4	tposF((pos.x - _widthH) / _widthH,
+					-(pos.y - _heightH) / _heightH,
+					0, 1),
+			tposB(tposF.x, tposF.y, 1, 1);
+
+	// screen -> world
+	tposF *= _invP;
+	tposF *= _sseRcp22Bit(tposF.w);
+	tposB *= _invP;
+	tposB *= _sseRcp22Bit(tposB.w);
+
+	auto plane = APlane::FromPtDir(Vec3(0,0,1), Vec3(0,0,-1));
+	float rf = plane.dot((const AVec3&)tposF),
+			rb = plane.dot((const AVec3&)tposB);
+	float r = std::fabs(rf) / (std::fabs(rf) + std::fabs(rb));
+	AVec4 tmp = tposF + (tposB - tposF) * r;
+	return Vec2(tmp.x, tmp.y);
+}
+spn::noseq_list<SPDraw, uint32_t>& TestGL::refDrawList() {
+	return _drawL;
 }
