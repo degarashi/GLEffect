@@ -8,13 +8,13 @@
 #define SEQ_INOUT (in)(out)(inout)
 #define SEQ_BLOCK (attribute)(varying)(uniform)(const)
 
-#define SEQ_GLSETTING ((linewidth,glLineWidth,float))((frontface,glFrontFace,float))((cullface,glCullFace,float))((depthrange,glDepthRange,float,float))((viewport,glViewport,float,float,float,float))\
-		((scissor,glScissor,float,float,float,float))((samplecoverage,glSampleCoverage,float,bool))((stencilfunc,glStencilFunc,float,float,float))((stencilfuncfront,StencilFuncFront,float,float,float))\
-		((stencilfuncback,StencilFuncBack,float,float,float))((stencilop,glStencilOp,float,float,float))((stencilopfront,StencilOpFront,float,float,float))((stencilopback,StencilOpBack,float,float,float))\
-		((depthfunc,glDepthFunc,float))((blendeq,glBlendEquation,float))((blendeqca,glBlendEquationSeparate,float,float))((blendfunc,glBlendFunc,float,float))\
-		((blendfuncca,glBlendFuncSeparate,float,float,float,float))((blendcolor,glBlendColor,float,float,float,float))\
+#define SEQ_GLSETTING ((linewidth,glLineWidth,float))((frontface,glFrontFace,unsigned))((cullface,glCullFace,unsigned))((depthrange,glDepthRange,float,float))((viewport,glViewport,float,float,float,float))\
+		((scissor,glScissor,float,float,float,float))((samplecoverage,glSampleCoverage,float,bool))((stencilfunc,glStencilFunc,unsigned,float,unsigned))((stencilfuncfront,StencilFuncFront,unsigned,float,unsigned))\
+		((stencilfuncback,StencilFuncBack,unsigned,float,unsigned))((stencilop,glStencilOp,unsigned,unsigned,unsigned))((stencilopfront,StencilOpFront,unsigned,unsigned,unsigned))((stencilopback,StencilOpBack,unsigned,unsigned,unsigned))\
+		((depthfunc,glDepthFunc,unsigned))((blendeq,glBlendEquation,unsigned))((blendeqca,glBlendEquationSeparate,unsigned,unsigned))((blendfunc,glBlendFunc,unsigned,unsigned))\
+		((blendfuncca,glBlendFuncSeparate,unsigned,unsigned,unsigned,unsigned))((blendcolor,glBlendColor,float,float,float,float))\
 		((colormask,glColorMask,bool,bool,bool,bool))((depthmask,glDepthMask,bool))\
-		((stencilmask,glStencilMask,float))((stencilmaskfront,StencilMaskFront,float))((stencilmaskback,StencilMaskBack,float))
+		((stencilmask,glStencilMask,unsigned))((stencilmaskfront,StencilMaskFront,unsigned))((stencilmaskback,StencilMaskBack,unsigned))
 
 #define NUM_TEXCOORD 8
 #define PPFUNC_ADDNUM(z,n,data) (BOOST_PP_CAT(data,n))
