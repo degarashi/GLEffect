@@ -26,7 +26,9 @@ void GR_Glx::_initRule0() {
 		lit('=')) > (rlVec | qi::float_ | qi::bool_)[at_c<3>(_val)=_1] > ';';
 	rlBoolSet %= qi::no_case[GLBoolsetting] > '=' > qi::no_case[qi::bool_] > ';';
 	rlValueSet %= qi::no_case[GLSetting] > '=' >
-			qi::repeat(1,4)[qi::no_case[GLColormask] | qi::float_ | qi::bool_] > ';';
+		qi::repeat(1,4)[(lit("0x") > qi::uint_) |
+		GLFunc | GLStencilop | GLEq | GLBlend | GLFace | GLFacedir |
+		qi::no_case[GLColormask] | qi::float_ | qi::bool_] > ';';
 	rlBlockUse = qi::no_case[GLBlocktype][at_c<0>(_val)=_1] > (lit('=')[at_c<1>(_val)=val(false)] | lit("+=")[at_c<1>(_val)=val(true)]) > (rlNameToken % ',')[at_c<2>(_val)=_1] > ';';
 	rlShSet = qi::no_case[GLShadertype][at_c<0>(_val)=_1] > '=' > rlNameToken[at_c<1>(_val)=_1] > lit('(') >
 		(-(rlVec|qi::bool_|qi::float_)[push_back(at_c<2>(_val), _1)] > *(lit(',') > (rlVec|qi::bool_|qi::float_)[push_back(at_c<2>(_val), _1)])) >
