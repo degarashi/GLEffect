@@ -6,7 +6,7 @@
 #include "spinner/plane.hpp"
 #include <boost/lexical_cast.hpp>
 
-QString BASE_PATH("./data");
+QString BASE_PATH("/usr/share/rigid2d-test");
 
 using namespace boom::geo2d;
 using namespace spn;

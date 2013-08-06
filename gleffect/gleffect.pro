@@ -57,7 +57,7 @@ CONFIG += c++11
 QMAKE_CXXFLAGS_DEBUG += -DDEBUG -ggdb3 -Wno-sequence-point -Wno-unused-parameter -Wno-unused-variable
 QMAKE_CXX = 'clang++'
 QMAKE_LINK = 'clang++'
-LIBS += -lGLU -lboomstick -lspinner -lboost_system -lboost_regex
+LIBS += -lGLU /tmp/boomstick_build/libboomstick.a /tmp/spinner_build/libspinner.a /usr/local/lib/libboost_system.a /usr/local/lib/libboost_regex.a
 QMAKE_LIBDIR += /tmp/spinner_build/ \
 				/tmp/boomstick_build/
 QMAKE_INCDIR += ./boomstick/ \
