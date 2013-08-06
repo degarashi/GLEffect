@@ -60,7 +60,7 @@ Arrow::Arrow() {
 	_hlIb = mgr_gl.makeIBuffer(GL_STATIC_DRAW);
 	_hlIb.ref()->initData(tmpI, countof(tmpI));
 
-	_hlTex = mgr_gl.loadTexture(QString(BASE_PATH) + "/sample.png", false);
+	_hlTex = mgr_gl.loadTexture(QString(BASE_PATH) + "/arrowI.png", false);
 	_hlTex.ref()->setFilter(false,false);
 }
 void Arrow::setFrom(const spn::Vec2& v) {
@@ -147,7 +147,7 @@ void Actor::_init() {
 	_hlIb.ref()->initData(tmpI, countof(tmpI));
 
 	// テクスチャmgr_gl読み込み
-	_hlTex = mgr_gl.loadTexture(QString(BASE_PATH) + "/sample.png", false);
+	_hlTex = mgr_gl.loadTexture(QString(BASE_PATH) + "/brick.jpg", false);
 //	_tex.reset(new TexDebug(new TDChecker(spn::Vec4(1,1,1,1), spn::Vec4(0,0,0,0), 24,24,256,256), false));
 	_hlTex.ref()->setFilter(true,true);
 }

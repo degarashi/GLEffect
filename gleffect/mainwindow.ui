@@ -154,10 +154,10 @@
          <item row="2" column="1">
           <widget class="QDoubleSpinBox" name="spinFricD">
            <property name="minimum">
-            <double>-10.000000000000000</double>
+            <double>-3.000000000000000</double>
            </property>
            <property name="maximum">
-            <double>10.000000000000000</double>
+            <double>0.000000000000000</double>
            </property>
            <property name="singleStep">
             <double>0.050000000000000</double>
@@ -180,7 +180,7 @@
             <double>500.000000000000000</double>
            </property>
            <property name="value">
-            <double>120.000000000000000</double>
+            <double>180.000000000000000</double>
            </property>
           </widget>
          </item>
