@@ -5,7 +5,7 @@
 #include "testgl.hpp"
 #include "spinner/plane.hpp"
 
-QString BASE_PATH("./data");
+QString BASE_PATH("/usr/share/rigid2d-test");
 
 using namespace boom::geo2d;
 using namespace spn;
