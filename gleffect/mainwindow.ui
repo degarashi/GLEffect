@@ -26,7 +26,7 @@
    <cursorShape>UpArrowCursor</cursorShape>
   </property>
   <property name="windowTitle">
-   <string>Rigid2D-Test v0.0.2-1</string>
+   <string>Rigid2D-Test v0.0.2-2</string>
   </property>
   <property name="autoFillBackground">
    <bool>false</bool>
