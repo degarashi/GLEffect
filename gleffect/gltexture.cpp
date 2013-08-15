@@ -91,7 +91,6 @@ void IGLTexture::setUVWrap(GLuint s, GLuint t) {
 	_bChanged = true;
 }
 
-
 #include <functional>
 namespace {
 	using ImgSize = std::pair<int,int>;

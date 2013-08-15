@@ -236,6 +236,8 @@ class GLDevice : public IGLResource {
 //! OpenGL関連のリソースマネージャ
 class GLRes : public spn::ResMgrN<UPResource, GLRes> {
 	using base_type = spn::ResMgrN<UPResource, GLRes>;
+	GLuint _tmpFb;
+
 	public:
 		//! ベースクラスのacquireメソッドを隠す為のダミー
 		void acquire();
@@ -259,6 +261,7 @@ class GLRes : public spn::ResMgrN<UPResource, GLRes> {
 		AnotherLHandle<UPIBuffer> makeIBuffer(GLuint dtype);
 
 		LHdl _common(const QString& key, std::function<UPResource()> cb);
+		GLuint getTmpFramebuffer() const;
 };
 
 DEF_HANDLE(GLRes, Tex, UPTexture)
@@ -269,6 +272,8 @@ DEF_HANDLE(GLRes, Prog, UPProg)
 DEF_HANDLE(GLRes, Sh, UPShader)
 DEF_HANDLE(GLRes, Fx, UPEffect)
 DEF_HANDLE(GLRes, Res, UPResource)
+DEF_HANDLE(GLRes, Fb, UPFBuffer)
+DEF_HANDLE(GLRes, Rb, UPRBuffer)
 
 //! GLSLプログラムクラス
 class GLProgram : public IGLResource {
@@ -449,4 +454,76 @@ class TexDebug : public IGLTexture {
 		TexDebug(ITDGen* gen, bool bCube);
 		void onDeviceReset() override;
 		bool operator == (const TexDebug& t) const;
+};
+
+//! OpenGL: RenderBufferObjectインタフェース
+class GLRBuffer : public IGLResource {
+	public:
+		//! DeviceLost時の挙動
+		enum OnLost {
+			NONE,		//!< 何もしない(領域はゴミデータになる)
+			CLEAR,		//!< 単色でクリア
+			RESTORE,	//!< 事前に保存しておいた内容で復元
+			NUM_ONLOST
+		};
+		// OpenGL ES2.0だとglDrawPixelsが使えない
+	private:
+		using F_LOST = std::function<void (GLuint,GLRBuffer&)>;
+		const static F_LOST cs_onLost[NUM_ONLOST],
+							cs_onReset[NUM_ONLOST];
+		GLuint		_idRbo;
+		OnLost		_behLost;
+
+		using Res = boost::variant<boost::none_t, spn::Vec4, ByteBuff, FloatBuff>;
+		Res				_restoreInfo;
+		GLenum			_buffFmt;
+		GLFormatV		_fmt;
+		int				_width,
+						_height;
+
+	public:
+		GLRBuffer(int w, int h, GLenum fmt);
+		~GLRBuffer();
+		void use() const;
+		void use_end() const;
+		void onDeviceReset() override;
+		void onDeviceLost() override;
+		void setOnLost(OnLost beh, const spn::Vec4* color=nullptr);
+		GLuint getBufferID() const;
+		void drawPixels(int w, int h);
+};
+
+//! OpenGL: FrameBufferObjectインタフェース
+class GLFBuffer : public IGLResource {
+	public:
+		// 今はOpenGL ES2 しか考えてないのでCOLOR_ATTACHMENTは0番Only
+		enum AttID {
+			COLOR0,
+			DEPTH,
+			STENCIL,
+			NUM_ATTACHMENT
+		};
+
+	private:
+		GLuint	_idFbo;
+		// 内部がTextureかRenderBufferなので、それらを格納できる型を定義
+		// GLuintは内部処理用 = RenderbufferのID
+		using Res = boost::variant<boost::none_t, HLTex, HLRb>;
+		Res	_attachment[NUM_ATTACHMENT] = {boost::none, boost::none, boost::none};
+
+		//! 変更のあった箇所
+		mutable uint32_t	_rflag;
+		void _applyFB() const;
+
+	public:
+		GLFBuffer();
+		~GLFBuffer();
+		void use() const;
+		void use_end() const;
+		void onDeviceReset() override;
+		void onDeviceLost() override;
+		void attach(AttID att, HRb hRb);
+		void attach(AttID att, HTex hTex);
+		void detach(AttID att);
+		const Res& getAttachment(AttID att) const;
 };

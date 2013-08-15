@@ -23,9 +23,14 @@ class GLProgram;
 using UPProg = std::unique_ptr<GLProgram>;
 class GLShader;
 using UPShader = std::unique_ptr<GLShader>;
+class GLFBuffer;
+using UPFBuffer = std::unique_ptr<GLFBuffer>;
+class GLRBuffer;
+using UPRBuffer = std::unique_ptr<GLRBuffer>;
 
 using ByteBuff = std::vector<uint8_t>;
 using U16Buff = std::vector<uint16_t>;
+using FloatBuff = std::vector<float>;
 
 enum ShType : unsigned int {
 	VERTEX, GEOMETRY, PIXEL,
