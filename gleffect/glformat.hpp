@@ -2,6 +2,7 @@
 #define BOOST_PP_VARIADICS 1
 #include <boost/preprocessor.hpp>
 #include <boost/variant.hpp>
+#include <boost/none.hpp>
 #include <unordered_map>
 #include <functional>
 #include "glhead.hpp"
@@ -71,33 +72,38 @@ namespace std {
 
 class GLFormat {
 	public:
-		enum class ID : uint32_t {
-			Internal,
-			Internal_Sized,
-			Internal_Compressed,
-			Internal_Render,
-			Internal_Read,
-			Type,
-			Depth,
-			Stencil,
-			DepthStencil,
-			NumID,
-			Invalid
+		enum ID : uint32_t {
+			Internal_Core = 0x01,
+			Internal_Sized = 0x02 | Internal_Core,
+			Internal_Compressed = 0x04 | Internal_Sized,
+			Internal_Render = 0x08,
+			Internal_Read = 0x10,
+			Depth = 0x20,
+			Stencil = 0x40,
+			DepthStencil = Depth | Stencil,
+			Internal = Internal_Compressed | DepthStencil | Internal_Render | Internal_Read,
+			Type = 0x100,
+			Invalid = 0x200,
+			Tag_All = 0x400,
+			Tag_DSC,
+			Tag_64bit,			//!< 1画素に64bit使うフォーマット (bool)
+			Tag_Size			//!< <not implemented yet> 1画素に使うビット数 (ビット数指定なしだったり圧縮フォーマットは0とする)
 		};
 		GLenum	value;
 
 	private:
 		// uint64_t
 		// フォーマット判定: (32bit:種別 32bit:OpenGLフォーマット値) -> ID(種別) 本当は0固定でも良い
-		// フォーマット検索: (32bit: NumID 32bit:OpenGLフォーマット値) -> ID(種別)
+		// フォーマット検索: (32bit: Tag_??? 32bit:OpenGLフォーマット値) -> ID(種別)
 		using IDMap = std::unordered_map<FmtID, ID>;
 		static IDMap s_idMap;
 
 	public:
 		GLFormat() = default;
 		GLFormat(GLenum fmt);
+		GLFormat(const GLFormat& fmt);
 		static bool Check(GLenum fmt, ID id);
-		static ID Detect(GLenum fmt);
+		static ID Detect(GLenum fmt, ID tag);
 
 		static void InitMap();
 };
@@ -107,15 +113,15 @@ class GLFormat {
 	constexpr static GLFormat::ID id = IDC; \
 	constexpr static bool valid=false; static bool check(GLenum fmt) { return GLFormat::Check(fmt, IDC); } }; BOOST_PP_SEQ_FOR_EACH(DEF_FMTCHECK, Name, Seq)
 
-DEF_CHECKER(DFmtCheck, GLFormat::ID::Depth, PSEQ_DEPTHFORMAT)
-DEF_CHECKER(SFmtCheck, GLFormat::ID::Stencil, PSEQ_STENCILFORMAT)
-DEF_CHECKER(DSFmtCheck, GLFormat::ID::DepthStencil, PSEQ_DSFORMAT)
-DEF_CHECKER(IFmtCheck, GLFormat::ID::Internal, SEQ_INTERNAL)
-DEF_CHECKER(ISFmtCheck, GLFormat::ID::Internal_Sized, SEQ_INTERNALSIZED)
-DEF_CHECKER(ICFmtCheck, GLFormat::ID::Internal_Compressed, SEQ_INTERNALCOMPRESSED)
-DEF_CHECKER(RenderFmtCheck, GLFormat::ID::Internal_Read, SEQ_INTERNALRENDER)
-DEF_CHECKER(ReadFmtCheck, GLFormat::ID::Internal_Render, SEQ_INTERNALREAD)
-DEF_CHECKER(TypeFmtCheck, GLFormat::ID::Type, SEQ_TYPE)
+DEF_CHECKER(DFmtCheck, GLFormat::Depth, PSEQ_DEPTHFORMAT)
+DEF_CHECKER(SFmtCheck, GLFormat::Stencil, PSEQ_STENCILFORMAT)
+DEF_CHECKER(DSFmtCheck, GLFormat::DepthStencil, PSEQ_DSFORMAT)
+DEF_CHECKER(IFmtCheck, GLFormat::Internal, SEQ_INTERNAL)
+DEF_CHECKER(ISFmtCheck, GLFormat::Internal_Sized, SEQ_INTERNALSIZED)
+DEF_CHECKER(ICFmtCheck, GLFormat::Internal_Compressed, SEQ_INTERNALCOMPRESSED)
+DEF_CHECKER(RenderFmtCheck, GLFormat::Internal_Read, SEQ_INTERNALRENDER)
+DEF_CHECKER(ReadFmtCheck, GLFormat::Internal_Render, SEQ_INTERNALREAD)
+DEF_CHECKER(TypeFmtCheck, GLFormat::Type, SEQ_TYPE)
 
 #undef DEF_CHECKER
 #undef DEF_FMTCHECK
@@ -127,6 +133,7 @@ class GLFormatBase : private GLFormat {
 	GLFormatBase(GLenum fmt, std::nullptr_t): GLFormat(fmt) {}
 
 	public:
+		GLFormatBase() = default;
 		GLFormatBase(GLenum fmt): GLFormat(fmt) {
 			// 深度のフォーマットかチェック (デバッグ時)
 			AAssert(Chk<0>::check(fmt));
@@ -135,12 +142,18 @@ class GLFormatBase : private GLFormat {
 			Chk<0>::check(fmt);
 			return *this;
 		}
+		GLFormatBase& operator = (const GLFormatBase& fmt) {
+			value = fmt.value;
+			return *this;
+		}
+
 		template <unsigned D>
 		GLFormatBase(): GLFormat(D) {
 			// コンパイル時のフォーマットチェック
 			static_assert(Chk<D>::valid, "invalid format");
 		}
 		GLenum get() const { return value; }
+		operator GLenum () const { return value; }
 };
 
 /*	上位クラスでのGLenumによる初期化はフォーマットのチェックが入る
@@ -155,11 +168,15 @@ using GLInRenderFmt = GLFormatBase<RenderFmtCheck>;
 using GLInReadFmt = GLFormatBase<ReadFmtCheck>;
 using GLTypeFmt = GLFormatBase<TypeFmtCheck>;
 
-using tagGLFormatV = boost::variant<GLDepthFmt, GLStencilFmt, GLDSFmt, GLInFmt, GLInSizedFmt, GLInCompressedFmt, GLInRenderFmt, GLInReadFmt, GLTypeFmt>;
+using tagGLFormatV = boost::variant<boost::none_t, GLDepthFmt, GLStencilFmt, GLDSFmt, GLInFmt, GLInSizedFmt, GLInCompressedFmt, GLInRenderFmt, GLInReadFmt, GLTypeFmt>;
 class GLFormatV : public tagGLFormatV {
 	using base_type = tagGLFormatV;
 	public:
-		using base_type::base_type;
+		GLFormatV(): tagGLFormatV(boost::none) {}
+		GLFormatV(const GLFormatV& v): tagGLFormatV(static_cast<const tagGLFormatV&>(v)) {}
+		GLFormatV(GLFormatV&& v): tagGLFormatV(static_cast<tagGLFormatV&&>(v)) {}
+		template <class T>
+		GLFormatV(T&& t): tagGLFormatV(std::forward<T>(t)) {}
 
 		using RetFormatV = std::function<GLFormatV (GLenum)>;
 		const static RetFormatV cs_retV[];
