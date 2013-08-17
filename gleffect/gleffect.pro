@@ -37,7 +37,8 @@ HEADERS  += mainwindow.h \
 	testgl.hpp \
 	gldefine.hpp \
 	dgassert.hpp \
-    glformat.hpp
+    glformat.hpp \
+    glformat_macro.hpp
 
 FORMS    += mainwindow.ui
 
