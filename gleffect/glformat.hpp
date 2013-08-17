@@ -2,7 +2,7 @@
 #define BOOST_PP_VARIADICS 1
 #include <boost/preprocessor.hpp>
 #include <boost/variant.hpp>
-#include <boost/none.hpp>
+#include <boost/optional.hpp>
 #include <unordered_map>
 #include <functional>
 #include "glhead.hpp"
@@ -34,7 +34,7 @@
 	#define PSEQ_DSFORMAT (GL_DEPTH_STENCIL)(GL_DEPTH24_STENCIL8)
 
 	//! 色フォーマットシーケンス
-	#define SEQ_INTERNAL			PSEQ_INTERNAL (GL_DEPTH_COMPONENT)
+	#define SEQ_INTERNAL			PSEQ_INTERNAL
 	#define SEQ_INTERNALSIZED		SEQ_INTERNAL (GL_R8)(GL_R8_SNORM)(GL_R16)(GL_R16_SNORM) \
 		(GL_RG8)(GL_RG8_SNORM)(GL_RG16)(GL_RG16_SNORM)(GL_R3_G3_B2)(GL_RGB4)(GL_RGB5)(GL_RGB8)(GL_RGB8_SNORM)(GL_RGB10)(GL_RGB12)(GL_RGB16_SNORM) \
 		(GL_RGBA2)(GL_RGBA4)(GL_RGB5_A1)(GL_RGBA8)(GL_RGBA8_SNORM)(GL_RGB10_A2)(GL_RGB10_A2UI)(GL_RGBA12)(GL_RGBA16)(GL_SRGB8)(GL_SRGB8_ALPHA8) \
@@ -42,8 +42,8 @@
 		(GL_R8UI)(GL_R16I)(GL_R16UI)(GL_R32I)(GL_R32UI)(GL_RG8I)(GL_RG8UI)(GL_RG16I)(GL_RG16UI)(GL_RG32I)(GL_RG32UI)(GL_RGB8I)(GL_RGB8UI) \
 		(GL_RGB16I)(GL_RGB16UI)(GL_RGB32I)(GL_RGB32UI)(GL_RGBA8I)(GL_RGBA8UI)(GL_RGBA16I)(GL_RGBA16UI)(GL_RGBA32I)(GL_RGBA32UI)
 	#define SEQ_INTERNALCOMPRESSED	SEQ_INTERNALSIZED PSEQ_COMPRESSED
-	#define SEQ_INTERNALREAD		SEQ_INTERNAL (GL_STENCIL_INDEX)
-	#define SEQ_INTERNALRENDER		PSEQ_DEPTHFORMAT PSEQ_STENCILFORMAT PSEQ_DSFORMAT PSEQ_INTERNAL
+	#define SEQ_INTERNALREAD		SEQ_INTERNAL (GL_DEPTH_COMPONENT)(GL_STENCIL_INDEX)
+	#define SEQ_INTERNALRENDER		SEQ_INTERNALSIZED PSEQ_DEPTHFORMAT PSEQ_STENCILFORMAT PSEQ_DSFORMAT
 	#define SEQ_TYPE				(GL_UNSIGNED_BYTE)(GL_BYTE)(GL_UNSIGNED_SHORT)(GL_SHORT)(GL_UNSIGNED_INT) \
 		(GL_INT)(GL_HALF_FLOAT)(GL_FLOAT)(GL_UNSIGNED_BYTE_3_3_2)(GL_UNSIGNED_BYTE_2_3_3_REV)(GL_UNSIGNED_SHORT_5_6_5) \
 		(GL_UNSIGNED_SHORT_5_6_5_REV)(GL_UNSIGNED_SHORT_4_4_4_4)(GL_UNSIGNED_SHORT_4_4_4_4_REV)(GL_UNSIGNED_SHORT_5_5_5_1) \
@@ -69,7 +69,14 @@ namespace std {
 		}
 	};
 }
+struct GLFormatInfo {
+	GLenum	toType;			//!< 保存する時のType
+	int		numType;		//!< 1画素に使うType数
+	GLenum	toBase;			//!< BaseFormatにする場合の型
 
+	GLFormatInfo() = default;
+	GLFormatInfo(GLenum toT, int nT, GLenum toB): toType(toT), numType(nT), toBase(toB) {}
+};
 class GLFormat {
 	public:
 		enum ID : uint32_t {
@@ -83,27 +90,32 @@ class GLFormat {
 			DepthStencil = Depth | Stencil,
 			Internal = Internal_Compressed | DepthStencil | Internal_Render | Internal_Read,
 			Type = 0x100,
-			Invalid = 0x200,
-			Tag_All = 0x400,
-			Tag_DSC,
-			Tag_64bit,			//!< 1画素に64bit使うフォーマット (bool)
-			Tag_Size			//!< <not implemented yet> 1画素に使うビット数 (ビット数指定なしだったり圧縮フォーマットは0とする)
+			Query_All = 0x200,
+			Query_DSC,
+			Query_Info,
+			Query_TypeSize,	//!< Typeのバイトサイズ
+			Invalid = 0xffffffff
 		};
 		GLenum	value;
 
 	private:
 		// uint64_t
 		// フォーマット判定: (32bit:種別 32bit:OpenGLフォーマット値) -> ID(種別) 本当は0固定でも良い
-		// フォーマット検索: (32bit: Tag_??? 32bit:OpenGLフォーマット値) -> ID(種別)
-		using IDMap = std::unordered_map<FmtID, ID>;
+		// フォーマット検索: (32bit: Query_??? 32bit:OpenGLフォーマット値) -> ID(種別)
+		using IDMap = std::unordered_map<FmtID, boost::variant<uint32_t,GLFormatInfo>>;
 		static IDMap s_idMap;
 
 	public:
+		using OPInfo = boost::optional<const GLFormatInfo&>;
+
 		GLFormat() = default;
 		GLFormat(GLenum fmt);
 		GLFormat(const GLFormat& fmt);
+		GLenum get() const;
 		static bool Check(GLenum fmt, ID id);
-		static ID Detect(GLenum fmt, ID tag);
+		static ID QueryFormat(GLenum fmt, ID tag);
+		static OPInfo QueryInfo(GLenum fmt);
+		static uint32_t QuerySize(GLenum typ);
 
 		static void InitMap();
 };
@@ -177,6 +189,7 @@ class GLFormatV : public tagGLFormatV {
 		GLFormatV(GLFormatV&& v): tagGLFormatV(static_cast<tagGLFormatV&&>(v)) {}
 		template <class T>
 		GLFormatV(T&& t): tagGLFormatV(std::forward<T>(t)) {}
+		GLenum get() const;
 
 		using RetFormatV = std::function<GLFormatV (GLenum)>;
 		const static RetFormatV cs_retV[];
