@@ -1,5 +1,14 @@
 #include "testgl.hpp"
 
+GLRes::GLRes() {
+	_upFb.reset(new GLFBuffer());
+	_tmpFb.reset(new GLFBufferTmp(_upFb->getBufferID()));
+	onDeviceReset();
+}
+GLRes::~GLRes() {
+	onDeviceLost();
+}
+
 GLRes::LHdl GLRes::_common(const QString& key, std::function<UPResource ()> cb) {
 	std::string ps = key.toStdString();
 	LHdl lh = getFromKey(ps);
@@ -36,4 +45,18 @@ HLProg GLRes::makeProgram(HSh vsh, HSh psh) {
 HLProg GLRes::makeProgram(HSh vsh, HSh gsh, HSh psh) {
 	LHdl lh = base_type::acquire(UPResource(new GLProgram(vsh,gsh,psh)));
 	return Cast<UPProg>(std::move(lh));
+}
+GLFBufferTmp& GLRes::getTmpFramebuffer() const {
+	return *_tmpFb;
+}
+
+void GLRes::onDeviceLost() {
+	for(auto& r : *this)
+		r->onDeviceLost();
+	_upFb->onDeviceLost();
+}
+void GLRes::onDeviceReset() {
+	_upFb->onDeviceReset();
+	for(auto& r : *this)
+		r->onDeviceReset();
 }
