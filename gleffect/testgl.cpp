@@ -204,6 +204,7 @@ void TestGL::_release() {
 }
 
 void TestGL::initialize() {
+	mgr_gl.onDeviceReset();
 	_hlFx = mgr_gl.loadEffect(QString(BASE_PATH) + "/test.glx");
 	std::cout	<< "OpenGL Version: " << ::glGetString(GL_VERSION) << std::endl
 				<< "OpenGL Vendor: " << ::glGetString(GL_VENDOR) << std::endl
