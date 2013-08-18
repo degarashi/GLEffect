@@ -14,6 +14,7 @@
 #include "spinner/vector.hpp"
 #include <boost/variant.hpp>
 #include "spinner/resmgr.hpp"
+#include "glformat.hpp"
 
 //! Tech:Pass の組み合わせを表す
 struct GL16ID {
@@ -232,11 +233,29 @@ class GLDevice : public IGLResource {
 #define GL_Warn() GL_WarnArg("")
 #define GL_ResetError() GLDevice::resetError();
 
+class GLFBufferTmp;
 #define mgr_gl GLRes::_ref()
 //! OpenGL関連のリソースマネージャ
 class GLRes : public spn::ResMgrN<UPResource, GLRes> {
 	using base_type = spn::ResMgrN<UPResource, GLRes>;
+	UPFBuffer						_upFb;
+	std::unique_ptr<GLFBufferTmp>	_tmpFb;
+	//! DeviceLost/Resetの状態管理
+	bool	_bInit;
+
+	template <class LHDL>
+	void initHandle(LHDL& lh) {
+		if(_bInit)
+			lh.ref()->onDeviceReset();
+	}
+
 	public:
+		GLRes();
+		~GLRes();
+		bool deviceStatus() const;
+		void onDeviceLost();
+		void onDeviceReset();
+
 		//! ベースクラスのacquireメソッドを隠す為のダミー
 		void acquire();
 		//! ファイルからテクスチャを読み込む
@@ -259,6 +278,7 @@ class GLRes : public spn::ResMgrN<UPResource, GLRes> {
 		AnotherLHandle<UPIBuffer> makeIBuffer(GLuint dtype);
 
 		LHdl _common(const QString& key, std::function<UPResource()> cb);
+		GLFBufferTmp& getTmpFramebuffer() const;
 };
 
 DEF_HANDLE(GLRes, Tex, UPTexture)
@@ -269,6 +289,8 @@ DEF_HANDLE(GLRes, Prog, UPProg)
 DEF_HANDLE(GLRes, Sh, UPShader)
 DEF_HANDLE(GLRes, Fx, UPEffect)
 DEF_HANDLE(GLRes, Res, UPResource)
+DEF_HANDLE(GLRes, Fb, UPFBuffer)
+DEF_HANDLE(GLRes, Rb, UPRBuffer)
 
 //! GLSLプログラムクラス
 class GLProgram : public IGLResource {
@@ -450,3 +472,129 @@ class TexDebug : public IGLTexture {
 		void onDeviceReset() override;
 		bool operator == (const TexDebug& t) const;
 };
+
+#define GLRESOURCE_INNER \
+	public: class Inner0; class Inner1; \
+					Inner0 use(); \
+					Inner0 operator -> (); \
+					Inner0 operator * ();
+#define DEF_GLRESOURCE_INNER_USING(z,data,elem) using data::elem;
+#define DEF_GLRESOURCE_INNER(base, seq) \
+			class base::Inner0 { \
+				base::Inner1& _base; \
+				public: Inner0(base& tmp): _base(reinterpret_cast<Inner1&>(tmp)) { base::Use(tmp); } \
+				~Inner0() { base::End(reinterpret_cast<base&>(_base)); } \
+				base::Inner1* operator -> () { return &_base; } }; \
+			class base::Inner1 : private base { \
+				Inner1() = delete; \
+				friend class base; \
+				static Inner1& Cast(base* b) { return reinterpret_cast<Inner1&>(*b); } \
+				public: BOOST_PP_SEQ_FOR_EACH(DEF_GLRESOURCE_INNER_USING, base, seq) \
+				static void end() {} };
+#define DEF_GLRESOURCE_CPP(base) \
+	base::Inner0 base::use() { return *this; } \
+	base::Inner0 base::operator -> () { return *this; } \
+	base::Inner0 base::operator * () { return *this; }
+
+//! 一時的にFramebufferを使いたい時のヘルパークラス
+class GLFBufferTmp {
+	GLRESOURCE_INNER
+	private:
+		GLuint _idFb;
+		static void Use(GLFBufferTmp& tmp);
+		static void End(GLFBufferTmp& tmp);
+
+		Inner1& _attach(GLenum flag, GLuint rb);
+
+	protected:
+		Inner1& attachColor(int n, GLuint rb);
+		Inner1& attachDepth(GLuint rb);
+		Inner1& attachStencil(GLuint rb);
+		Inner1& attachDS(GLuint rb);
+
+	public:
+		GLFBufferTmp(GLuint idFb);
+};
+DEF_GLRESOURCE_INNER(GLFBufferTmp, (attachColor)(attachDepth)(attachStencil)(attachDS))
+
+//! OpenGL: RenderBufferObjectインタフェース
+/*! Use/EndインタフェースはユーザーがRenderbufferに直接何かする事は無いが内部的に使用 */
+class GLRBuffer : public IGLResource {
+	GLRESOURCE_INNER
+	public:
+		//! DeviceLost時の挙動
+		enum OnLost {
+			NONE,		//!< 何もしない(領域はゴミデータになる)
+			CLEAR,		//!< 単色でクリア
+			RESTORE,	//!< 事前に保存しておいた内容で復元
+			NUM_ONLOST
+		};
+		// OpenGL ES2.0だとglDrawPixelsが使えない
+	private:
+		using F_LOST = std::function<void (GLFBufferTmp&,GLRBuffer&)>;
+		const static F_LOST cs_onLost[NUM_ONLOST],
+							cs_onReset[NUM_ONLOST];
+		GLuint		_idRbo;
+		OnLost		_behLost;
+
+		using Res = boost::variant<boost::none_t, spn::Vec4, ByteBuff>;
+		Res				_restoreInfo;
+		GLTypeFmt		_buffFmt;
+		GLFormatV		_fmt;
+		int				_width,
+						_height;
+		static void Use(GLRBuffer& rb);
+		static void End(GLRBuffer& rb);
+		//! 現在指定されているサイズとフォーマットでRenderbuffer領域を確保 (内部用)
+		Inner1& allocate();
+
+	public:
+		GLRBuffer(int w, int h, GLInRenderFmt fmt);
+		~GLRBuffer();
+		void onDeviceReset() override;
+		void onDeviceLost() override;
+		void setOnLost(OnLost beh, const spn::Vec4* color=nullptr);
+		GLuint getBufferID() const;
+		int getWidth() const;
+		int getHeight() const;
+		const GLFormatV& getFormat() const;
+};
+DEF_GLRESOURCE_INNER(GLRBuffer, NOTHING)
+
+//! OpenGL: FrameBufferObjectインタフェース
+class GLFBuffer : public IGLResource {
+	GLRESOURCE_INNER
+	public:
+		// 今はOpenGL ES2 しか考えてないのでCOLOR_ATTACHMENTは0番Only
+		enum AttID {
+			COLOR0,
+			DEPTH,
+			STENCIL,
+			NUM_ATTACHMENT
+		};
+		static GLenum _AttIDtoGL(AttID att);
+
+	private:
+		GLuint	_idFbo;
+		// 内部がTextureかRenderBufferなので、それらを格納できる型を定義
+		// GLuintは内部処理用 = RenderbufferのID
+		using Res = boost::variant<boost::none_t, HLTex, HLRb>;
+		Res	_attachment[NUM_ATTACHMENT] = {boost::none, boost::none, boost::none};
+
+		static void Use(GLFBuffer& fb);
+		static void End(GLFBuffer& fb);
+
+	protected:
+		Inner1& attach(AttID att, HRb hRb);
+		Inner1& attach(AttID att, HTex hTex);
+		Inner1& detach(AttID att);
+
+	public:
+		GLFBuffer();
+		~GLFBuffer();
+		void onDeviceReset() override;
+		void onDeviceLost() override;
+		const Res& getAttachment(AttID att) const;
+		GLuint getBufferID() const;
+};
+DEF_GLRESOURCE_INNER(GLFBuffer, (attach)(detach))

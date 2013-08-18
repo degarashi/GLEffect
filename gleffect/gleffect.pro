@@ -24,7 +24,9 @@ SOURCES += main.cpp\
 	openglwindow.cpp \
 	glx_parse2.cpp \
 	glassert.cpp \
-	glresource.cpp
+	glresource.cpp \
+    glframebuffer.cpp \
+    glformat.cpp
 
 HEADERS  += mainwindow.h \
 	glext.h \
@@ -35,7 +37,9 @@ HEADERS  += mainwindow.h \
 	glx_macro.hpp \
 	testgl.hpp \
 	gldefine.hpp \
-	dgassert.hpp
+	dgassert.hpp \
+    glformat.hpp \
+    glformat_macro.hpp
 
 FORMS    += mainwindow.ui
 
