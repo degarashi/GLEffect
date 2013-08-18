@@ -240,10 +240,19 @@ class GLRes : public spn::ResMgrN<UPResource, GLRes> {
 	using base_type = spn::ResMgrN<UPResource, GLRes>;
 	UPFBuffer						_upFb;
 	std::unique_ptr<GLFBufferTmp>	_tmpFb;
+	//! DeviceLost/Resetの状態管理
+	bool	_bInit;
+
+	template <class LHDL>
+	void initHandle(LHDL& lh) {
+		if(_bInit)
+			lh.ref()->onDeviceReset();
+	}
 
 	public:
 		GLRes();
 		~GLRes();
+		bool deviceStatus() const;
 		void onDeviceLost();
 		void onDeviceReset();
 
