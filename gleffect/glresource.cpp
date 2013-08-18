@@ -1,9 +1,8 @@
 #include "testgl.hpp"
 
 GLRes::GLRes() {
+	_bInit = false;
 	_upFb.reset(new GLFBuffer());
-	_tmpFb.reset(new GLFBufferTmp(_upFb->getBufferID()));
-	onDeviceReset();
 }
 GLRes::~GLRes() {
 	onDeviceLost();
@@ -50,13 +49,24 @@ GLFBufferTmp& GLRes::getTmpFramebuffer() const {
 	return *_tmpFb;
 }
 
+bool GLRes::deviceStatus() const {
+	return _bInit;
+}
 void GLRes::onDeviceLost() {
-	for(auto& r : *this)
-		r->onDeviceLost();
-	_upFb->onDeviceLost();
+	if(!_bInit) {
+		_bInit = true;
+		for(auto& r : *this)
+			r->onDeviceLost();
+		_tmpFb.reset(nullptr);
+		_upFb->onDeviceLost();
+	}
 }
 void GLRes::onDeviceReset() {
-	_upFb->onDeviceReset();
-	for(auto& r : *this)
-		r->onDeviceReset();
+	if(_bInit) {
+		_bInit = false;
+		_upFb->onDeviceReset();
+		_tmpFb.reset(new GLFBufferTmp(_upFb->getBufferID()));
+		for(auto& r : *this)
+			r->onDeviceReset();
+	}
 }
