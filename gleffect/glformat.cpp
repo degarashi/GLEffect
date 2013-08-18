@@ -19,6 +19,13 @@ GLFormat::OPInfo GLFormat::QueryInfo(GLenum fmt) {
 		return boost::get<GLFormatInfo>(itr->second);
 	return boost::none;
 }
+uint32_t GLFormat::QuerySize(GLenum typ) {
+	auto itr = s_idMap.find(FmtID(Query_TypeSize, typ));
+	if(itr != s_idMap.end())
+		return boost::get<uint32_t>(itr->second);
+	return 0;
+}
+
 GLenum GLFormat::get() const { return value; }
 
 const GLFormatV::RetFormatV GLFormatV::cs_retV[] = {
