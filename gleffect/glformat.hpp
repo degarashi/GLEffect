@@ -109,8 +109,8 @@ class GLFormat {
 		using OPInfo = boost::optional<const GLFormatInfo&>;
 
 		GLFormat() = default;
+		GLFormat(const GLFormat& fmt) = default;
 		GLFormat(GLenum fmt);
-		GLFormat(const GLFormat& fmt);
 		GLenum get() const;
 		static bool Check(GLenum fmt, ID id);
 		static ID QueryFormat(GLenum fmt, ID tag);
