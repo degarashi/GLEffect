@@ -53,8 +53,8 @@ bool GLRes::deviceStatus() const {
 	return _bInit;
 }
 void GLRes::onDeviceLost() {
-	if(!_bInit) {
-		_bInit = true;
+	if(_bInit) {
+		_bInit = false;
 		for(auto& r : *this)
 			r->onDeviceLost();
 		_tmpFb.reset(nullptr);
@@ -62,8 +62,8 @@ void GLRes::onDeviceLost() {
 	}
 }
 void GLRes::onDeviceReset() {
-	if(_bInit) {
-		_bInit = false;
+	if(!_bInit) {
+		_bInit = true;
 		_upFb->onDeviceReset();
 		_tmpFb.reset(new GLFBufferTmp(_upFb->getBufferID()));
 		for(auto& r : *this)
