@@ -54,6 +54,31 @@ namespace std {
 	};
 }
 
+#define GLRESOURCE_INNER \
+	public: static struct tagUse{} TagUse; class Inner0; class Inner1; \
+					Inner0 use(); \
+					void use(tagUse); \
+					Inner0 operator -> (); \
+					Inner0 operator * ();
+#define DEF_GLRESOURCE_INNER_USING(z,data,elem) using data::elem;
+#define DEF_GLRESOURCE_INNER(base, seq) \
+			class base::Inner0 { \
+				base::Inner1& _base; \
+				public: Inner0(base& tmp): _base(reinterpret_cast<Inner1&>(tmp)) { base::Use(tmp); } \
+				~Inner0() { base::End(reinterpret_cast<base&>(_base)); } \
+				base::Inner1* operator -> () { return &_base; } }; \
+			class base::Inner1 : private base { \
+				Inner1() = delete; \
+				friend class base; \
+				static Inner1& Cast(base* b) { return reinterpret_cast<Inner1&>(*b); } \
+				public: BOOST_PP_SEQ_FOR_EACH(DEF_GLRESOURCE_INNER_USING, base, seq) \
+				static void end() {} };
+#define DEF_GLRESOURCE_CPP(base) \
+	void base::use(tagUse) { Use(*this); } \
+	base::Inner0 base::use() { return *this; } \
+	base::Inner0 base::operator -> () { return *this; } \
+	base::Inner0 base::operator * () { return *this; }
+
 //! OpenGL関連のリソース
 /*! Android用にデバイスロスト対応 */
 struct IGLResource {
@@ -116,15 +141,22 @@ class GLShader : public IGLResource {
 
 //! OpenGLバッファクラス
 class GLBuffer : public IGLResource {
-	GLuint		_buffType,			//!< VERTEX_BUFFERなど
-				_drawType,			//!< STATIC_DRAWなどのフラグ
-				_stride,			//!< 頂点1つのバイトサイズ
-				_idBuff;			//!< OpenGLバッファID
-	ByteBuff	_buff;				//!< 再構築の際に必要となるデータ実体
+	GLRESOURCE_INNER
+	private:
+		GLuint		_buffType,			//!< VERTEX_BUFFERなど
+					_drawType,			//!< STATIC_DRAWなどのフラグ
+					_stride,			//!< 要素1つのバイトサイズ
+					_idBuff;			//!< OpenGLバッファID
+		ByteBuff	_buff;				//!< 再構築の際に必要となるデータ実体
 
-	const static GLuint cs_cnv[];
-
-	void _initBuffer();
+	protected:
+		// 全域を書き換え
+		Inner1& initData(const void* src, size_t nElem, GLuint stride);
+		Inner1& initData(ByteBuff&& buff, GLuint stride);
+		// 部分的に書き換え
+		Inner1& updateData(const void* src, size_t nElem, GLuint offset);
+		static void Use(GLBuffer& b);
+		static void End(GLBuffer& b);
 
 	public:
 		GLBuffer(GLuint flag, GLuint dtype);
@@ -132,19 +164,12 @@ class GLBuffer : public IGLResource {
 		void onDeviceLost() override;
 		void onDeviceReset() override;
 
-		// 全域を書き換え
-		void initData(const void* src, size_t nElem, GLuint stride=0);
-		void initData(ByteBuff&& buff, GLuint stride=0);
-		// 部分的に書き換え
-		void updateData(const void* src, size_t nElem, GLuint offset);
-
 		GLuint getBuffID() const;
 		GLuint getBuffType() const;
 		GLuint getStride() const;
-		static GLuint GetUnitSize(GLuint flag);
-
-		void use() const;
 };
+DEF_GLRESOURCE_INNER(GLBuffer, (initData)(updateData))
+
 //! 頂点バッファ
 class GLVBuffer : public GLBuffer {
 	public:
@@ -153,16 +178,20 @@ class GLVBuffer : public GLBuffer {
 
 //! インデックスバッファ
 class GLIBuffer : public GLBuffer {
+	GLRESOURCE_INNER
+	protected:
+		Inner1& initData(const GLubyte* src, size_t nElem);
+		Inner1& initData(const GLushort* src, size_t nElem);
+		Inner1& initData(ByteBuff&& buff);
+		Inner1& initData(const U16Buff& buff);
+
+		Inner1& updateData(const GLushort* src, size_t nElem, GLuint offset);
+		Inner1& updateData(const GLubyte* src, size_t nElem, GLuint offset);
+
 	public:
 		GLIBuffer(GLuint dtype);
-		void initData(const GLubyte* src, size_t nElem);
-		void initData(const GLushort* src, size_t nElem);
-		void initData(ByteBuff&& buff);
-		void initData(const U16Buff& buff);
-
-		void updateData(const GLushort* src, size_t nElem, GLuint offset);
-		void updateData(const GLubyte* src, size_t nElem, GLuint offset);
 };
+DEF_GLRESOURCE_INNER(GLIBuffer, (initData)(updateData))
 
 //! OpenGLエラーIDとその詳細メッセージ
 struct ErrID {
@@ -300,19 +329,8 @@ class GLProgram : public IGLResource {
 	void _initProgram();
 
 	public:
-		GLProgram(HSh vsh, HSh psh) {
-			_shader[ShType::VERTEX] = vsh;
-			_shader[ShType::PIXEL] = psh;
-			_initProgram();
-		}
-		GLProgram(HSh vsh, HSh gsh, HSh psh) {
-			_shader[ShType::VERTEX] = vsh;
-			_shader[ShType::PIXEL] = psh;
-			_shader[ShType::GEOMETRY] = gsh;
-			_initProgram();
-		}
-
-		GLProgram();
+		GLProgram(HSh vsh, HSh psh);
+		GLProgram(HSh vsh, HSh gsh, HSh psh);
 		~GLProgram() override;
 		void onDeviceLost() override;
 		void onDeviceReset() override;
@@ -327,9 +345,9 @@ class GLProgram : public IGLResource {
 //! OpenGLテクスチャインタフェース
 /*!	フィルターはNEARESTとLINEARしか無いからboolで管理 */
 class IGLTexture : public IGLResource {
+	GLRESOURCE_INNER
 	public:
 		enum State {
-			NotDecided = -1,
 			NoMipmap,
 			MipmapNear,
 			MipmapLinear
@@ -342,36 +360,39 @@ class IGLTexture : public IGLResource {
 				_iWrapT;
 		int		_width,
 				_height;
-		bool	_bChanged;	//!< 何かフィルタ設定が変更された時にtrue
+		GLuint	_actID;			//!< セットしようとしているActiveTextureID (for Use())
 
+		//! [mipLevel][Nearest / Linear]
 		const static GLuint cs_Filter[3][2];
 
-		State	_state;
+		State	_mipLevel;
 		GLuint	_texFlag;	//!< TEXTURE_2D or TEXTURE_CUBE_MAP
 		float	_coeff;
 
 		bool _onDeviceReset();
 		IGLTexture(bool bCube);
-		void _applyFilter();
+
+		static void Use(IGLTexture& t);
+		static void End(IGLTexture& t);
+
+	protected:
+		Inner1& setFilter(State miplevel, bool bLinearMag, bool bLinearMin);
+		Inner1& setAnisotropicCoeff(float coeff);
+		Inner1& setUVWrap(GLuint s, GLuint t);
 
 	public:
 		~IGLTexture();
 		int getWidth() const;
 		int getHeight() const;
 		GLint getTextureID() const;
-		void setFilter(bool bLinearMag, bool bLinearMin);
-		void setAnisotropicCoeff(float coeff);
-		void setUVWrap(GLuint s, GLuint t);
 		void onDeviceLost() override;
-		void use();				//!< 現在のテクスチャユニットにBind
-		void use(int n);		//!< テクスチャユニット番号を指定してBind
-		void use_end() const;
-		void applyFilter();
-		void setMipmap(State level);
+		void setActiveID(GLuint n);	//!< テクスチャユニット番号を指定してBind
 
+		static bool IsMipmap(State level);
 		bool isMipmap() const;
 		bool isCubemap() const;
 };
+DEF_GLRESOURCE_INNER(IGLTexture, (setFilter)(setAnisotropicCoeff)(setUVWrap))
 
 template <class T, int N>
 struct Pack {
@@ -472,29 +493,6 @@ class TexDebug : public IGLTexture {
 		void onDeviceReset() override;
 		bool operator == (const TexDebug& t) const;
 };
-
-#define GLRESOURCE_INNER \
-	public: class Inner0; class Inner1; \
-					Inner0 use(); \
-					Inner0 operator -> (); \
-					Inner0 operator * ();
-#define DEF_GLRESOURCE_INNER_USING(z,data,elem) using data::elem;
-#define DEF_GLRESOURCE_INNER(base, seq) \
-			class base::Inner0 { \
-				base::Inner1& _base; \
-				public: Inner0(base& tmp): _base(reinterpret_cast<Inner1&>(tmp)) { base::Use(tmp); } \
-				~Inner0() { base::End(reinterpret_cast<base&>(_base)); } \
-				base::Inner1* operator -> () { return &_base; } }; \
-			class base::Inner1 : private base { \
-				Inner1() = delete; \
-				friend class base; \
-				static Inner1& Cast(base* b) { return reinterpret_cast<Inner1&>(*b); } \
-				public: BOOST_PP_SEQ_FOR_EACH(DEF_GLRESOURCE_INNER_USING, base, seq) \
-				static void end() {} };
-#define DEF_GLRESOURCE_CPP(base) \
-	base::Inner0 base::use() { return *this; } \
-	base::Inner0 base::operator -> () { return *this; } \
-	base::Inner0 base::operator * () { return *this; }
 
 //! 一時的にFramebufferを使いたい時のヘルパークラス
 class GLFBufferTmp {

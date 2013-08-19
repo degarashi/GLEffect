@@ -3,6 +3,7 @@
 #include "glresource.hpp"
 
 // ------------------------- IGLTexture -------------------------
+DEF_GLRESOURCE_CPP(IGLTexture)
 const GLuint IGLTexture::cs_Filter[3][2] = {
 	{GL_NEAREST, GL_LINEAR},
 	{GL_NEAREST_MIPMAP_NEAREST, GL_NEAREST_MIPMAP_LINEAR},
@@ -10,59 +11,63 @@ const GLuint IGLTexture::cs_Filter[3][2] = {
 };
 IGLTexture::IGLTexture(bool bCube):
 	_idTex(0), _iLinearMag(0), _iLinearMin(0), _iWrapS(GL_CLAMP_TO_EDGE), _iWrapT(GL_CLAMP_TO_EDGE),
-	_bChanged(true), _state(State::NotDecided), _texFlag(bCube ? GL_TEXTURE_CUBE_MAP : GL_TEXTURE_2D), _coeff(0) {}
+	_actID(0), _mipLevel(NoMipmap), _texFlag(bCube ? GL_TEXTURE_CUBE_MAP : GL_TEXTURE_2D), _coeff(0) {}
+
+void IGLTexture::Use(IGLTexture& t) {
+	glActiveTexture(GL_TEXTURE0 + t._actID);
+	glBindTexture(t._texFlag, t._idTex);
+}
+void IGLTexture::End(IGLTexture& t) {
+	GL_ACheck()
+	glBindTexture(t._texFlag, 0);
+}
 
 bool IGLTexture::_onDeviceReset() {
 	if(_idTex == 0) {
 		glGenTextures(1, &_idTex);
-		glBindTexture(_texFlag, _idTex);
+		// フィルタの設定
+		use()->setFilter(_mipLevel, static_cast<bool>(_iLinearMag), static_cast<bool>(_iLinearMin))
+			->setAnisotropicCoeff(_coeff)
+			->setUVWrap(_iWrapS, _iWrapT);
 		return true;
 	}
 	return false;
-}
-void IGLTexture::_applyFilter() {
-	if((_state==State::NotDecided && !(_state=NoMipmap)) || _bChanged) {
-		_bChanged = false;
-		glTexParameteri(_texFlag, GL_TEXTURE_MAG_FILTER, cs_Filter[0][_iLinearMag]);
-		glTexParameteri(_texFlag, GL_TEXTURE_MIN_FILTER, cs_Filter[_state][_iLinearMin]);
-		glTexParameteri(_texFlag, GL_TEXTURE_WRAP_S, _iWrapS);
-		glTexParameteri(_texFlag, GL_TEXTURE_WRAP_T, _iWrapT);
-
-		GLfloat aMax;
-		glGetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &aMax);
-		glTexParameteri(_texFlag, GL_TEXTURE_MAX_ANISOTROPY_EXT, aMax*_coeff);
-
-		GL_ACheck()
-	}
-}
-void IGLTexture::applyFilter() {
-	use();
-	_applyFilter();
-	use_end();
 }
 
 IGLTexture::~IGLTexture() { onDeviceLost(); }
 int IGLTexture::getWidth() const { return _width; }
 int IGLTexture::getHeight() const { return _height; }
 GLint IGLTexture::getTextureID() const { return _idTex; }
-bool IGLTexture::isMipmap() const { return _state==MipmapNear || _state==MipmapLinear; }
+void IGLTexture::setActiveID(GLuint n) { _actID = n; }
+bool IGLTexture::isMipmap() const { return  IsMipmap(_mipLevel); }
 bool IGLTexture::isCubemap() const { return _texFlag != GL_TEXTURE_2D; }
 
-void IGLTexture::setAnisotropicCoeff(float coeff) {
-	_coeff = coeff;
-	_bChanged = true;
+bool IGLTexture::IsMipmap(State level) {
+	return level >= MipmapNear;
 }
-void IGLTexture::setFilter(bool bLinearMag, bool bLinearMin) {
+IGLTexture::Inner1& IGLTexture::setAnisotropicCoeff(float coeff) {
+	_coeff = coeff;
+	GLfloat aMax;
+	glGetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &aMax);
+	glTexParameteri(_texFlag, GL_TEXTURE_MAX_ANISOTROPY_EXT, aMax*_coeff);
+	return Inner1::Cast(this);
+}
+IGLTexture::Inner1& IGLTexture::setFilter(State miplevel, bool bLinearMag, bool bLinearMin) {
 	_iLinearMag = bLinearMag ? 1 : 0;
 	_iLinearMin = bLinearMin ? 1 : 0;
-	_bChanged = true;
-}
-void IGLTexture::setMipmap(State level) {
-	if(_state == NotDecided || _state != level) {
-		_state = level;
+	bool b = isMipmap() ^ IsMipmap(miplevel);
+	_mipLevel = miplevel;
+	if(b) {
+		// ミップマップの有りなしを切り替える時はテクスチャを作りなおす
+		End(*this);
 		onDeviceLost();
 		onDeviceReset();
+		Use(*this);
 	}
+	glTexParameteri(_texFlag, GL_TEXTURE_MAG_FILTER, cs_Filter[0][_iLinearMag]);
+	glTexParameteri(_texFlag, GL_TEXTURE_MIN_FILTER, cs_Filter[_mipLevel][_iLinearMin]);
+
+	return Inner1::Cast(this);
 }
 
 void IGLTexture::onDeviceLost() {
@@ -73,22 +78,13 @@ void IGLTexture::onDeviceLost() {
 		GL_ACheck()
 	}
 }
-void IGLTexture::use() {
-	glBindTexture(_texFlag, _idTex);
-	_applyFilter();
-	GL_ACheck()
-}
-void IGLTexture::use(int n) {
-	glActiveTexture(GL_TEXTURE0 + n);
-	use();
-}
-void IGLTexture::use_end() const {
-	glBindTexture(_texFlag, 0);
-}
-void IGLTexture::setUVWrap(GLuint s, GLuint t) {
+IGLTexture::Inner1& IGLTexture::setUVWrap(GLuint s, GLuint t) {
 	_iWrapS = s;
 	_iWrapT = t;
-	_bChanged = true;
+
+	glTexParameteri(_texFlag, GL_TEXTURE_WRAP_S, _iWrapS);
+	glTexParameteri(_texFlag, GL_TEXTURE_WRAP_T, _iWrapT);
+	return Inner1::Cast(this);
 }
 
 #include <functional>
@@ -154,20 +150,17 @@ namespace {
 	}
 }
 // ------------------------- TexFile -------------------------
-TexFile::TexFile(const QString& path, bool bCube): IGLTexture(bCube), _fPath(path) {
-	onDeviceReset();
-}
+TexFile::TexFile(const QString& path, bool bCube): IGLTexture(bCube), _fPath(path) {}
 TexFile::TexFile(const QString& path0, const QString& path1, const QString& path2,
 				 const QString& path3, const QString& path4, const QString& path5): IGLTexture(true), _fPath(QS6{path0,path1,path2,path3,path4,path5}) {}
 
 void TexFile::onDeviceReset() {
 	if(_onDeviceReset()) {
+		auto u = use();
 		ImgSize size = boost::apply_visitor(MakeCubeProc(isMipmap() ? GLTMip : GLTNomip), _fPath);
 		_width = size.first;
 		_height = size.second;
-		// サーフェスを作りなおしたので更新フラグを立てる
-		_bChanged = true;
-		GL_ACheck()
+		u->end();
 	}
 }
 bool TexFile::operator == (const TexFile& t) const {
@@ -181,11 +174,11 @@ TexUser::TexUser(const QImage& img0, const QImage& img1, const QImage& img2,
 
 void TexUser::onDeviceReset() {
 	if(_onDeviceReset()) {
+		auto u = use();
 		ImgSize size = boost::apply_visitor(MakeCubeProc(isMipmap() ? GLTMipI : GLTNomipI), _image);
 		_width = size.first;
 		_height = size.second;
-		_bChanged = true;
-		GL_ACheck()
+		u->end();
 	}
 }
 bool TexUser::operator == (const TexUser& t) const {
@@ -196,15 +189,14 @@ bool TexUser::operator == (const TexUser& t) const {
 TexDebug::TexDebug(ITDGen* gen, bool bCube): IGLTexture(bCube), _upGen(gen) {
 	if(bCube) _gen = ITD6(gen);
 	else _gen = gen;
-	onDeviceReset();
 }
 void TexDebug::onDeviceReset() {
 	if(_onDeviceReset()) {
+		auto u = use();
 		ImgSize size = boost::apply_visitor(MakeCubeProc(isMipmap() ? GLTMipG : GLTNomipG), _gen);
 		_width = size.first;
 		_height = size.second;
-		_bChanged = true;
-		GL_ACheck()
+		u->end();
 	}
 }
 bool TexDebug::operator == (const TexDebug& t) const {

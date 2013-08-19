@@ -107,7 +107,7 @@ VDecl::VDecl(std::initializer_list<VDInfo> il) {
 		for(auto& t2 : t) {
 			if(ofs > t2.offset)
 				throw GLE_Error("invalid vertex offset");
-			ofs += GLBuffer::GetUnitSize(t2.elemFlag) * t2.elemSize;
+			ofs += GLFormat::QuerySize(t2.elemFlag) * t2.elemSize;
 		}
 	}
 
@@ -136,14 +136,12 @@ void VDecl::apply(const VData& vdata) const {
 		// VStreamが設定されていればBindする
 		if(hl.valid()) {
 			auto& sp = hl.cref();
-			sp->use();
-
+			sp->use(GLVBuffer::TagUse);
 			GLuint stride = sp->getStride();
 			for(int j=_nEnt[i] ; j<_nEnt[i+1] ; j++)
 				_func[j](stride, vdata.attrID);
 		}
 	}
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
 
 // ----------------- TPStructR -----------------
@@ -427,9 +425,11 @@ namespace {
 		void operator()(const HLTex& tex) const {
 			auto itr = _tIdx.find(_id);
 			if(itr != _tIdx.end()) {
-				tex.cref()->use(itr->second);
+				auto& cr = tex.cref();
+				cr->setActiveID(itr->second);
+				auto cr2 = cr->use();
 				glUniform1i(_id, itr->second);
-				GL_Warn()
+				cr2->end();
 			} else
 				WarnArg(false, "uniform id=%1% is not sampler", _id)
 		}
@@ -464,7 +464,7 @@ void GLEffect::_refreshIStream() {
 	if(Bit::ChClear(_rflg, REFL_ISTREAM)) {
 		_refreshProgram();
 		// ElementArrayをシェーダーに設定
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, _iBuffer.cref()->getBuffID());
+		_iBuffer.cref()->use(GLIBuffer::TagUse);
 		GL_ACheck()
 	}
 }
