@@ -54,6 +54,29 @@ namespace std {
 	};
 }
 
+#define GLRESOURCE_INNER \
+	public: class Inner0; class Inner1; \
+					Inner0 use(); \
+					Inner0 operator -> (); \
+					Inner0 operator * ();
+#define DEF_GLRESOURCE_INNER_USING(z,data,elem) using data::elem;
+#define DEF_GLRESOURCE_INNER(base, seq) \
+			class base::Inner0 { \
+				base::Inner1& _base; \
+				public: Inner0(base& tmp): _base(reinterpret_cast<Inner1&>(tmp)) { base::Use(tmp); } \
+				~Inner0() { base::End(reinterpret_cast<base&>(_base)); } \
+				base::Inner1* operator -> () { return &_base; } }; \
+			class base::Inner1 : private base { \
+				Inner1() = delete; \
+				friend class base; \
+				static Inner1& Cast(base* b) { return reinterpret_cast<Inner1&>(*b); } \
+				public: BOOST_PP_SEQ_FOR_EACH(DEF_GLRESOURCE_INNER_USING, base, seq) \
+				static void end() {} };
+#define DEF_GLRESOURCE_CPP(base) \
+	base::Inner0 base::use() { return *this; } \
+	base::Inner0 base::operator -> () { return *this; } \
+	base::Inner0 base::operator * () { return *this; }
+
 //! OpenGL関連のリソース
 /*! Android用にデバイスロスト対応 */
 struct IGLResource {
@@ -300,19 +323,8 @@ class GLProgram : public IGLResource {
 	void _initProgram();
 
 	public:
-		GLProgram(HSh vsh, HSh psh) {
-			_shader[ShType::VERTEX] = vsh;
-			_shader[ShType::PIXEL] = psh;
-			_initProgram();
-		}
-		GLProgram(HSh vsh, HSh gsh, HSh psh) {
-			_shader[ShType::VERTEX] = vsh;
-			_shader[ShType::PIXEL] = psh;
-			_shader[ShType::GEOMETRY] = gsh;
-			_initProgram();
-		}
-
-		GLProgram();
+		GLProgram(HSh vsh, HSh psh);
+		GLProgram(HSh vsh, HSh gsh, HSh psh);
 		~GLProgram() override;
 		void onDeviceLost() override;
 		void onDeviceReset() override;
@@ -327,9 +339,9 @@ class GLProgram : public IGLResource {
 //! OpenGLテクスチャインタフェース
 /*!	フィルターはNEARESTとLINEARしか無いからboolで管理 */
 class IGLTexture : public IGLResource {
+	GLRESOURCE_INNER
 	public:
 		enum State {
-			NotDecided = -1,
 			NoMipmap,
 			MipmapNear,
 			MipmapLinear
@@ -342,36 +354,39 @@ class IGLTexture : public IGLResource {
 				_iWrapT;
 		int		_width,
 				_height;
-		bool	_bChanged;	//!< 何かフィルタ設定が変更された時にtrue
+		GLuint	_actID;			//!< セットしようとしているActiveTextureID (for Use())
 
+		//! [mipLevel][Nearest / Linear]
 		const static GLuint cs_Filter[3][2];
 
-		State	_state;
+		State	_mipLevel;
 		GLuint	_texFlag;	//!< TEXTURE_2D or TEXTURE_CUBE_MAP
 		float	_coeff;
 
 		bool _onDeviceReset();
 		IGLTexture(bool bCube);
-		void _applyFilter();
+
+		static void Use(IGLTexture& t);
+		static void End(IGLTexture& t);
+
+	protected:
+		Inner1& setFilter(State miplevel, bool bLinearMag, bool bLinearMin);
+		Inner1& setAnisotropicCoeff(float coeff);
+		Inner1& setUVWrap(GLuint s, GLuint t);
 
 	public:
 		~IGLTexture();
 		int getWidth() const;
 		int getHeight() const;
 		GLint getTextureID() const;
-		void setFilter(bool bLinearMag, bool bLinearMin);
-		void setAnisotropicCoeff(float coeff);
-		void setUVWrap(GLuint s, GLuint t);
 		void onDeviceLost() override;
-		void use();				//!< 現在のテクスチャユニットにBind
-		void use(int n);		//!< テクスチャユニット番号を指定してBind
-		void use_end() const;
-		void applyFilter();
-		void setMipmap(State level);
+		void setActiveID(GLuint n);	//!< テクスチャユニット番号を指定してBind
 
+		static bool IsMipmap(State level);
 		bool isMipmap() const;
 		bool isCubemap() const;
 };
+DEF_GLRESOURCE_INNER(IGLTexture, (setFilter)(setAnisotropicCoeff)(setUVWrap))
 
 template <class T, int N>
 struct Pack {
@@ -472,29 +487,6 @@ class TexDebug : public IGLTexture {
 		void onDeviceReset() override;
 		bool operator == (const TexDebug& t) const;
 };
-
-#define GLRESOURCE_INNER \
-	public: class Inner0; class Inner1; \
-					Inner0 use(); \
-					Inner0 operator -> (); \
-					Inner0 operator * ();
-#define DEF_GLRESOURCE_INNER_USING(z,data,elem) using data::elem;
-#define DEF_GLRESOURCE_INNER(base, seq) \
-			class base::Inner0 { \
-				base::Inner1& _base; \
-				public: Inner0(base& tmp): _base(reinterpret_cast<Inner1&>(tmp)) { base::Use(tmp); } \
-				~Inner0() { base::End(reinterpret_cast<base&>(_base)); } \
-				base::Inner1* operator -> () { return &_base; } }; \
-			class base::Inner1 : private base { \
-				Inner1() = delete; \
-				friend class base; \
-				static Inner1& Cast(base* b) { return reinterpret_cast<Inner1&>(*b); } \
-				public: BOOST_PP_SEQ_FOR_EACH(DEF_GLRESOURCE_INNER_USING, base, seq) \
-				static void end() {} };
-#define DEF_GLRESOURCE_CPP(base) \
-	base::Inner0 base::use() { return *this; } \
-	base::Inner0 base::operator -> () { return *this; } \
-	base::Inner0 base::operator * () { return *this; }
 
 //! 一時的にFramebufferを使いたい時のヘルパークラス
 class GLFBufferTmp {

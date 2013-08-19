@@ -427,9 +427,11 @@ namespace {
 		void operator()(const HLTex& tex) const {
 			auto itr = _tIdx.find(_id);
 			if(itr != _tIdx.end()) {
-				tex.cref()->use(itr->second);
+				auto& cr = tex.cref();
+				cr->setActiveID(itr->second);
+				auto cr2 = cr->use();
 				glUniform1i(_id, itr->second);
-				GL_Warn()
+				cr2->end();
 			} else
 				WarnArg(false, "uniform id=%1% is not sampler", _id)
 		}

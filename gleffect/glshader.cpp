@@ -99,17 +99,28 @@ int GLShader::getShaderID() const {
 	return _idSh;
 }
 void GLShader::onDeviceLost() {
-	if(!isEmpty()) {
+	if(_idSh!=0) {
 		glDeleteShader(_idSh);
 		_idSh = 0;
 	}
 }
 void GLShader::onDeviceReset() {
-	if(!isEmpty())
+	if(!isEmpty() && _idSh==0)
 		_initShader();
 }
 
 // ---------------------- GLProgram ----------------------
+GLProgram::GLProgram(HSh vsh, HSh psh) {
+	_shader[ShType::VERTEX] = vsh;
+	_shader[ShType::PIXEL] = psh;
+	_initProgram();
+}
+GLProgram::GLProgram(HSh vsh, HSh gsh, HSh psh) {
+	_shader[ShType::VERTEX] = vsh;
+	_shader[ShType::PIXEL] = psh;
+	_shader[ShType::GEOMETRY] = gsh;
+	_initProgram();
+}
 void GLProgram::_initProgram() {
 	_idProg = glCreateProgram();
 	for(int i=0 ; i<static_cast<int>(ShType::NUM_SHTYPE) ; i++) {
@@ -132,23 +143,28 @@ void GLProgram::_initProgram() {
 		throw GLE_ProgramError(_idProg);
 }
 GLProgram::~GLProgram() {
-	if(_idProg != 0)
-		onDeviceLost();
+	onDeviceLost();
 }
 void GLProgram::onDeviceLost() {
-	for(auto& s : _shader) {
-		if(s) {
-			glDetachShader(_idProg, s.cref()->getShaderID());
-			s.cref()->onDeviceLost();
+	if(_idProg != 0) {
+		for(auto& s : _shader) {
+			if(s) {
+				glDetachShader(_idProg, s.cref()->getShaderID());
+				s.cref()->onDeviceLost();
+			}
 		}
+		glDeleteProgram(_idProg);
+		_idProg = 0;
 	}
-	glDeleteProgram(_idProg);
-	_idProg = 0;
 }
 void GLProgram::onDeviceReset() {
-	for(auto& s : _shader)
-		if(s)
-			s.cref()->onDeviceReset();
+	if(_idProg == 0) {
+		for(auto& s : _shader) {
+			if(s)
+				s.cref()->onDeviceReset();
+		}
+		_initProgram();
+	}
 }
 const HLSh& GLProgram::getShader(ShType type) const {
 	return _shader[(int)type];

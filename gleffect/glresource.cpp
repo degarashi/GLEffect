@@ -13,6 +13,7 @@ GLRes::LHdl GLRes::_common(const QString& key, std::function<UPResource ()> cb) 
 	LHdl lh = getFromKey(ps);
 	if(!lh.valid())
 		lh = base_type::acquire(std::move(ps), cb()).first;
+	initHandle(lh);
 	return std::move(lh);
 }
 HLTex GLRes::loadTexture(const QString& path, bool bCube) {
@@ -22,6 +23,7 @@ HLTex GLRes::loadTexture(const QString& path, bool bCube) {
 
 HLSh GLRes::makeShader(GLuint flag, const std::string& src) {
 	LHdl lh = base_type::acquire(UPResource(new GLShader(flag, src)));
+	initHandle(lh);
 	return Cast<UPShader>(std::move(lh));
 }
 HLFx GLRes::loadEffect(const QString& path) {
@@ -30,19 +32,23 @@ HLFx GLRes::loadEffect(const QString& path) {
 }
 HLVb GLRes::makeVBuffer(GLuint dtype) {
 	LHdl lh = base_type::acquire(UPResource(new GLVBuffer(dtype)));
+	initHandle(lh);
 	return Cast<UPVBuffer>(std::move(lh));
 }
 HLIb GLRes::makeIBuffer(GLuint dtype) {
 	LHdl lh = base_type::acquire(UPResource(new GLIBuffer(dtype)));
+	initHandle(lh);
 	return Cast<UPIBuffer>(std::move(lh));
 }
 
 HLProg GLRes::makeProgram(HSh vsh, HSh psh) {
 	LHdl lh = base_type::acquire(UPResource(new GLProgram(vsh,psh)));
+	initHandle(lh);
 	return Cast<UPProg>(std::move(lh));
 }
 HLProg GLRes::makeProgram(HSh vsh, HSh gsh, HSh psh) {
 	LHdl lh = base_type::acquire(UPResource(new GLProgram(vsh,gsh,psh)));
+	initHandle(lh);
 	return Cast<UPProg>(std::move(lh));
 }
 GLFBufferTmp& GLRes::getTmpFramebuffer() const {
