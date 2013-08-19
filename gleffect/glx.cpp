@@ -427,9 +427,8 @@ namespace {
 			if(itr != _tIdx.end()) {
 				auto& cr = tex.cref();
 				cr->setActiveID(itr->second);
-				auto cr2 = cr->use();
+				cr->use(IGLTexture::TagUse);
 				glUniform1i(_id, itr->second);
-				cr2->end();
 			} else
 				WarnArg(false, "uniform id=%1% is not sampler", _id)
 		}
