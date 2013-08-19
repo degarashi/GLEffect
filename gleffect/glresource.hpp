@@ -55,8 +55,9 @@ namespace std {
 }
 
 #define GLRESOURCE_INNER \
-	public: class Inner0; class Inner1; \
+	public: static struct tagUse{} TagUse; class Inner0; class Inner1; \
 					Inner0 use(); \
+					void use(tagUse); \
 					Inner0 operator -> (); \
 					Inner0 operator * ();
 #define DEF_GLRESOURCE_INNER_USING(z,data,elem) using data::elem;
@@ -73,6 +74,7 @@ namespace std {
 				public: BOOST_PP_SEQ_FOR_EACH(DEF_GLRESOURCE_INNER_USING, base, seq) \
 				static void end() {} };
 #define DEF_GLRESOURCE_CPP(base) \
+	void base::use(tagUse) { Use(*this); } \
 	base::Inner0 base::use() { return *this; } \
 	base::Inner0 base::operator -> () { return *this; } \
 	base::Inner0 base::operator * () { return *this; }
