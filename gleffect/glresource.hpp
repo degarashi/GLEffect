@@ -141,15 +141,22 @@ class GLShader : public IGLResource {
 
 //! OpenGLバッファクラス
 class GLBuffer : public IGLResource {
-	GLuint		_buffType,			//!< VERTEX_BUFFERなど
-				_drawType,			//!< STATIC_DRAWなどのフラグ
-				_stride,			//!< 頂点1つのバイトサイズ
-				_idBuff;			//!< OpenGLバッファID
-	ByteBuff	_buff;				//!< 再構築の際に必要となるデータ実体
+	GLRESOURCE_INNER
+	private:
+		GLuint		_buffType,			//!< VERTEX_BUFFERなど
+					_drawType,			//!< STATIC_DRAWなどのフラグ
+					_stride,			//!< 要素1つのバイトサイズ
+					_idBuff;			//!< OpenGLバッファID
+		ByteBuff	_buff;				//!< 再構築の際に必要となるデータ実体
 
-	const static GLuint cs_cnv[];
-
-	void _initBuffer();
+	protected:
+		// 全域を書き換え
+		Inner1& initData(const void* src, size_t nElem, GLuint stride);
+		Inner1& initData(ByteBuff&& buff, GLuint stride);
+		// 部分的に書き換え
+		Inner1& updateData(const void* src, size_t nElem, GLuint offset);
+		static void Use(GLBuffer& b);
+		static void End(GLBuffer& b);
 
 	public:
 		GLBuffer(GLuint flag, GLuint dtype);
@@ -157,19 +164,12 @@ class GLBuffer : public IGLResource {
 		void onDeviceLost() override;
 		void onDeviceReset() override;
 
-		// 全域を書き換え
-		void initData(const void* src, size_t nElem, GLuint stride=0);
-		void initData(ByteBuff&& buff, GLuint stride=0);
-		// 部分的に書き換え
-		void updateData(const void* src, size_t nElem, GLuint offset);
-
 		GLuint getBuffID() const;
 		GLuint getBuffType() const;
 		GLuint getStride() const;
-		static GLuint GetUnitSize(GLuint flag);
-
-		void use() const;
 };
+DEF_GLRESOURCE_INNER(GLBuffer, (initData)(updateData))
+
 //! 頂点バッファ
 class GLVBuffer : public GLBuffer {
 	public:
@@ -178,16 +178,20 @@ class GLVBuffer : public GLBuffer {
 
 //! インデックスバッファ
 class GLIBuffer : public GLBuffer {
+	GLRESOURCE_INNER
+	protected:
+		Inner1& initData(const GLubyte* src, size_t nElem);
+		Inner1& initData(const GLushort* src, size_t nElem);
+		Inner1& initData(ByteBuff&& buff);
+		Inner1& initData(const U16Buff& buff);
+
+		Inner1& updateData(const GLushort* src, size_t nElem, GLuint offset);
+		Inner1& updateData(const GLubyte* src, size_t nElem, GLuint offset);
+
 	public:
 		GLIBuffer(GLuint dtype);
-		void initData(const GLubyte* src, size_t nElem);
-		void initData(const GLushort* src, size_t nElem);
-		void initData(ByteBuff&& buff);
-		void initData(const U16Buff& buff);
-
-		void updateData(const GLushort* src, size_t nElem, GLuint offset);
-		void updateData(const GLubyte* src, size_t nElem, GLuint offset);
 };
+DEF_GLRESOURCE_INNER(GLIBuffer, (initData)(updateData))
 
 //! OpenGLエラーIDとその詳細メッセージ
 struct ErrID {

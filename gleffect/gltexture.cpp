@@ -19,6 +19,7 @@ void IGLTexture::Use(IGLTexture& t) {
 }
 void IGLTexture::End(IGLTexture& t) {
 	GL_ACheck()
+	glBindTexture(t._texFlag, 0);
 }
 
 bool IGLTexture::_onDeviceReset() {
