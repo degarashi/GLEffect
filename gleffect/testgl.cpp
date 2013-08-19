@@ -58,10 +58,10 @@ Arrow::Arrow() {
 		2,3,0
 	};
 	_hlIb = mgr_gl.makeIBuffer(GL_STATIC_DRAW);
-	_hlIb.ref()->initData(tmpI, countof(tmpI));
+	_hlIb.ref()->use()->initData(tmpI, countof(tmpI));
 
 	_hlTex = mgr_gl.loadTexture(QString(BASE_PATH) + "/arrowI.png", false);
-	_hlTex.ref()->setFilter(false,false);
+	_hlTex.ref()->use()->setFilter(IGLTexture::NoMipmap, false,false);
 }
 void Arrow::setFrom(const spn::Vec2& v) {
 	_vFrom = v;
@@ -96,7 +96,7 @@ void Arrow::draw(GLEffect* glf, MStack& ms) {
 			Vec4{1,1,0,0}
 		}
 	};
-	_hlVb.ref()->initData(tmpV, countof(tmpV), sizeof(TmpV));
+	_hlVb.ref()->use()->initData(tmpV, countof(tmpV), sizeof(TmpV));
 
 	GLint id = glf->getUniformID("mTrans");
 	glf->setUniform(ms.top(), id);
@@ -136,7 +136,7 @@ void Actor::_init() {
 		}
 	};
 	_hlVb = mgr_gl.makeVBuffer(GL_STATIC_DRAW);
-	_hlVb.ref()->initData(tmpV, countof(tmpV), sizeof(TmpV));
+	_hlVb.ref()->use()->initData(tmpV, countof(tmpV), sizeof(TmpV));
 
 	// インデックス定義
 	GLubyte tmpI[] = {
@@ -144,12 +144,12 @@ void Actor::_init() {
 		2,3,0
 	};
 	_hlIb = mgr_gl.makeIBuffer(GL_STATIC_DRAW);
-	_hlIb.ref()->initData(tmpI, countof(tmpI));
+	_hlIb.ref()->use()->initData(tmpI, countof(tmpI));
 
 	// テクスチャmgr_gl読み込み
 	_hlTex = mgr_gl.loadTexture(QString(BASE_PATH) + "/brick.jpg", false);
 //	_tex.reset(new TexDebug(new TDChecker(spn::Vec4(1,1,1,1), spn::Vec4(0,0,0,0), 24,24,256,256), false));
-	_hlTex.ref()->setFilter(true,true);
+	_hlTex.ref()->use()->setFilter(IGLTexture::NoMipmap, true,true);
 }
 
 Actor::Actor(HMdl hMdl) {
