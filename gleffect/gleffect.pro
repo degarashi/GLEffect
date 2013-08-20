@@ -39,7 +39,8 @@ HEADERS  += mainwindow.h \
 	gldefine.hpp \
 	dgassert.hpp \
     glformat.hpp \
-    glformat_const.hpp
+    glformat_const.hpp \
+    common.hpp 
 
 FORMS    += mainwindow.ui
 

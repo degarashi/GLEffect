@@ -20,6 +20,11 @@ HLTex GLRes::loadTexture(const QString& path, bool bCube) {
 	LHdl lh = _common(path, [&](){return UPResource(new TexFile(path,bCube));});
 	return Cast<UPTexture>(std::move(lh));
 }
+HLTex GLRes::createTexture(const Size& size, GLInSizedFmt fmt, bool bRestore) {
+	LHdl lh = base_type::acquire(UPResource(new TexEmpty(size, fmt, bRestore)));
+	initHandle(lh);
+	return Cast<UPTexture>(std::move(lh));
+}
 
 HLSh GLRes::makeShader(GLuint flag, const std::string& src) {
 	LHdl lh = base_type::acquire(UPResource(new GLShader(flag, src)));

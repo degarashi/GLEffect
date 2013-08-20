@@ -164,7 +164,6 @@ class GLFormatBase : private GLFormat {
 	GLFormatBase(GLenum fmt, std::nullptr_t): GLFormat(fmt) {}
 
 	public:
-		GLFormatBase() = default;
 		GLFormatBase(GLenum fmt): GLFormat(fmt) {
 			// 深度のフォーマットかチェック (デバッグ時)
 			AAssert(Chk<0>::check(fmt));

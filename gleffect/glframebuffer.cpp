@@ -3,7 +3,7 @@
 // ------------------------- GLRBuffer -------------------------
 DEF_GLRESOURCE_CPP(GLRBuffer)
 GLRBuffer::GLRBuffer(int w, int h, GLInRenderFmt fmt):
-	_idRbo(0), _behLost(NONE), _restoreInfo(boost::none), _fmt(fmt), _width(w), _height(h)
+	_idRbo(0), _behLost(NONE), _restoreInfo(boost::none), _buffFmt(GLFormat::QueryInfo(fmt)->toType), _fmt(fmt), _width(w), _height(h)
 {}
 GLRBuffer::~GLRBuffer() {
 	onDeviceLost();

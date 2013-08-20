@@ -15,6 +15,7 @@
 #include <boost/variant.hpp>
 #include "spinner/resmgr.hpp"
 #include "glformat.hpp"
+#include "common.hpp"
 
 //! Tech:Pass の組み合わせを表す
 struct GL16ID {
@@ -287,8 +288,14 @@ class GLRes : public spn::ResMgrN<UPResource, GLRes> {
 
 		//! ベースクラスのacquireメソッドを隠す為のダミー
 		void acquire();
+
+		// ------------ Texture ------------
 		//! ファイルからテクスチャを読み込む
 		AnotherLHandle<UPTexture> loadTexture(const QString& path, bool bCube=false);
+		//! 空のテクスチャを作成
+		/*! 中身はゴミデータ */
+		AnotherLHandle<UPTexture> createTexture(const Size& size, GLInSizedFmt fmt, bool bRestore=false);
+		// ------------ Shader ------------
 		//! 文字列からシェーダーを作成
 		AnotherLHandle<UPShader> makeShader(GLuint flag, const std::string& src);
 
@@ -299,6 +306,7 @@ class GLRes : public spn::ResMgrN<UPResource, GLRes> {
 		//! 複数のシェーダーからプログラムを作成 (vertex, pixel)
 		HLProg makeProgram(HSh vsh, HSh psh);
 
+		// ------------ Buffer ------------
 		//! ファイルからエフェクトの読み込み
 		AnotherLHandle<UPEffect> loadEffect(const QString& path);
 		//! 頂点バッファの確保
@@ -358,8 +366,7 @@ class IGLTexture : public IGLResource {
 				_iLinearMin,
 				_iWrapS,
 				_iWrapT;
-		int		_width,
-				_height;
+		Size	_size;
 		GLuint	_actID;			//!< セットしようとしているActiveTextureID (for Use())
 
 		//! [mipLevel][Nearest / Linear]
@@ -367,10 +374,11 @@ class IGLTexture : public IGLResource {
 
 		State	_mipLevel;
 		GLuint	_texFlag;	//!< TEXTURE_2D or TEXTURE_CUBE_MAP
+		GLInSizedFmt	_format;
 		float	_coeff;
 
 		bool _onDeviceReset();
-		IGLTexture(bool bCube);
+		IGLTexture(GLInSizedFmt fmt, bool bCube);
 
 		static void Use(IGLTexture& t);
 		static void End(IGLTexture& t);
@@ -382,8 +390,7 @@ class IGLTexture : public IGLResource {
 
 	public:
 		~IGLTexture();
-		int getWidth() const;
-		int getHeight() const;
+		const Size& getSize() const;
 		GLint getTextureID() const;
 		void onDeviceLost() override;
 		void setActiveID(GLuint n);	//!< テクスチャユニット番号を指定してBind
@@ -418,8 +425,8 @@ struct Pack {
 };
 
 //! ファイルから生成したテクスチャ
-/*! DeviceLost時:
-	一旦バッファにコピーして後で復元 */
+/*! DeviceReset時:
+	再度ファイルから読み出す */
 class TexFile : public IGLTexture {
 	using QS6 = Pack<QString, 6>;
 	boost::variant<QString, QS6>	_fPath;
@@ -434,18 +441,30 @@ class TexFile : public IGLTexture {
 };
 
 //! ユーザー定義のユニークテクスチャ
-/*! DeviceLost時:
-	再度ファイルから読み出す */
+/*! DeviceReset時:
+	QImage使用時: 一旦バッファにコピーして後で復元
+	空テクスチャ時: 何もしない	*/
 class TexUser : public IGLTexture {
 	using QI6 = Pack<QImage, 6>;
 	boost::variant<QImage, QI6>		_image;
 
 	public:
+		//! QtのImageクラスからテクスチャを生成
 		TexUser(const QImage& img);
 		TexUser(const QImage& img0, const QImage& img1, const QImage& img2,
 				const QImage& img3, const QImage& img4, const QImage& img5);
 		void onDeviceReset() override;
 		bool operator == (const TexUser& t) const;
+};
+//! ユーザー定義の空テクスチャ
+class TexEmpty : public IGLTexture {
+	using OPBuff = boost::optional<ByteBuff>;
+	OPBuff	_buff;	//!< DeviceLost時用のバッファ。有効なら復元
+	public:
+		TexEmpty(const Size& size, GLInSizedFmt fmt, bool bRestore=false);
+		void onDeviceLost() override;
+		void onDeviceReset() override;
+		bool operator == (const TexEmpty& t) const;
 };
 
 //! デバッグ用テクスチャ模様生成インタフェース
