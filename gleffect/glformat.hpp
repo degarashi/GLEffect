@@ -69,13 +69,29 @@ namespace std {
 		}
 	};
 }
-struct GLFormatInfo {
+struct GLFormatDesc {
 	GLenum	toType;			//!< 保存する時のType
 	int		numType;		//!< 1画素に使うType数
 	GLenum	toBase;			//!< BaseFormatにする場合の型
 
-	GLFormatInfo() = default;
-	GLFormatInfo(GLenum toT, int nT, GLenum toB): toType(toT), numType(nT), toBase(toB) {}
+	GLFormatDesc() = default;
+	GLFormatDesc(GLenum toT, int nT, GLenum toB): toType(toT), numType(nT), toBase(toB) {}
+};
+enum class GLSLType : uint32_t {
+	IntT,
+	FloatT,
+	DoubleT,
+	BoolT,
+	TextureT,
+	IntTextureT,
+	MatrixT,
+	DMatrixT
+};
+struct GLSLFormatDesc {
+	GLSLType	type;
+	uint32_t	dim;
+	bool		bUnsigned;
+	bool		bCubed;
 };
 class GLFormat {
 	public:
@@ -94,6 +110,7 @@ class GLFormat {
 			Query_DSC,
 			Query_Info,
 			Query_TypeSize,	//!< Typeのバイトサイズ
+			Query_GLSLTypeInfo,
 			Invalid = 0xffffffff
 		};
 		GLenum	value;
@@ -102,11 +119,12 @@ class GLFormat {
 		// uint64_t
 		// フォーマット判定: (32bit:種別 32bit:OpenGLフォーマット値) -> ID(種別) 本当は0固定でも良い
 		// フォーマット検索: (32bit: Query_??? 32bit:OpenGLフォーマット値) -> ID(種別)
-		using IDMap = std::unordered_map<FmtID, boost::variant<uint32_t,GLFormatInfo>>;
+		using IDMap = std::unordered_map<FmtID, boost::variant<uint32_t,GLFormatDesc, GLSLFormatDesc>>;
 		static IDMap s_idMap;
 
 	public:
-		using OPInfo = boost::optional<const GLFormatInfo&>;
+		using OPInfo = boost::optional<const GLFormatDesc&>;
+		using OPGLSLInfo = boost::optional<const GLSLFormatDesc&>;
 
 		GLFormat() = default;
 		GLFormat(const GLFormat& fmt) = default;
@@ -116,6 +134,7 @@ class GLFormat {
 		static ID QueryFormat(GLenum fmt, ID tag);
 		static OPInfo QueryInfo(GLenum fmt);
 		static uint32_t QuerySize(GLenum typ);
+		static OPGLSLInfo QueryGLSLInfo(GLenum fmt);
 
 		static void InitMap();
 };

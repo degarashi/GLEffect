@@ -33,11 +33,11 @@ struct GLDiffID {
 	union {
 		uint32_t		value;
 		struct {
-			uint16_t	fromID, toID;
+			GL16ID		fromID, toID;
 		};
 	};
 	GLDiffID() {}
-	GLDiffID(uint_fast16_t id0, uint_fast16_t id1): fromID(id0), toID(id1) {}
+	GLDiffID(GL16ID id0, GL16ID id1): fromID(id0), toID(id1) {}
 	bool operator < (const GLDiffID& t) const { return value < t.value; }
 	bool operator == (const GLDiffID& t) const { return value == t.value; }
 };

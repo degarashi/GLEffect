@@ -147,18 +147,14 @@ GLProgram::~GLProgram() {
 }
 void GLProgram::onDeviceLost() {
 	if(_idProg != 0) {
-		for(auto& s : _shader) {
-			if(s) {
-				glDetachShader(_idProg, s.cref()->getShaderID());
-				s.cref()->onDeviceLost();
-			}
-		}
+		// ShaderはProgramをDeleteすれば自動的にdetachされる
 		glDeleteProgram(_idProg);
 		_idProg = 0;
 	}
 }
 void GLProgram::onDeviceReset() {
 	if(_idProg == 0) {
+		// 先にshaderがresetされてないかもしれないので、ここでしておく
 		for(auto& s : _shader) {
 			if(s)
 				s.cref()->onDeviceReset();
