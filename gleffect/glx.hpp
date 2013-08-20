@@ -95,21 +95,42 @@ using Setting = boost::variant<BoolSettingR, ValueSettingR>;
 using SettingList = std::vector<Setting>;
 //! Tech | Pass の分だけ作成
 class TPStructR {
-	HLProg			_prog;
-	// --- 関連情報(ゼロから構築する場合の設定項目) ---
-	//! Attribute: 頂点セマンティクスに対する頂点ID
-	/*! 無効なセマンティクスは負数 */
-	GLint			_vAttrID[static_cast<int>(VSem::NUM_SEMANTIC)];
-	//! Setting: Uniformデフォルト値(texture, vector, float, bool)設定を含む。GLDeviceの設定クラスリスト
-	SettingList		_setting;
+	public:
+		using MacroMap = std::map<std::string, std::string>;
+		using AttrL = std::vector<const AttrEntry*>;
+		using VaryL = std::vector<const VaryEntry*>;
+		using ConstL = std::vector<const ConstEntry*>;
+		using UnifL = std::vector<const UnifEntry*>;
 
-	UniEntryMap		_noDefValue;	//!< Uniform非デフォルト値エントリリスト (主にユーザーの入力チェック用)
-	UniMapID		_defValue;		//!< Uniformデフォルト値と対応するID
+	private:
+		HLProg			_prog;
+		// --- 関連情報(ゼロから構築する場合の設定項目) ---
+		//! Attribute: 頂点セマンティクスに対する頂点ID
+		/*! 無効なセマンティクスは負数 */
+		GLint			_vAttrID[static_cast<int>(VSem::NUM_SEMANTIC)];
+		//! Setting: Uniformデフォルト値(texture, vector, float, bool)設定を含む。GLDeviceの設定クラスリスト
+		SettingList		_setting;
+
+		UniEntryMap		_noDefValue;	//!< Uniform非デフォルト値エントリリスト (主にユーザーの入力チェック用)
+		UniMapID		_defValue;		//!< Uniformデフォルト値と対応するID
+		bool			_bInit = false;	//!< lost/resetのチェック用 (Debug)
+
+		// ----------- GLXStructから読んだデータ群 -----------
+		AttrL			_attrL;
+		VaryL			_varyL;
+		ConstL			_constL;
+		UnifL			_unifL;
 
 	public:
 		TPStructR();
 		TPStructR(TPStructR&& tp);
+		//! エフェクトファイルのパース結果を読み取る
 		TPStructR(const GLXStruct& gs, int tech, int pass);
+
+		//! OpenGL関連のリソースを解放
+		/*! GLResourceの物とは別。GLEffectから呼ぶ */
+		void ts_onDeviceLost();
+		void ts_onDeviceReset();
 
 		bool findSetting(const Setting& s) const;
 		void swap(TPStructR& tp) noexcept;
@@ -123,7 +144,7 @@ class TPStructR {
 		//! 頂点ポインタを設定 (GLXから呼ぶ)
 		void setVertex(const UPVDecl& vdecl, const HLVb (&stream)[VData::MAX_STREAM]) const;
 		//! 設定差分を求める
-		static TPStructR calcDiff(const TPStructR& from, const TPStructR& to);
+		static SettingList CalcDiff(const TPStructR& from, const TPStructR& to);
 };
 //! 引数の型チェックと同時に出力
 struct ArgChecker : boost::static_visitor<> {
@@ -168,11 +189,13 @@ class GLEffect : public IGLResource {
 		void _applyShaderSetting() const;
 
 		using TechMap = std::unordered_map<GL16ID, TPStructR>;
-		using DiffCache = std::unordered_map<GLDiffID, int>;
+// TODO: 差分キャッシュの実装 (set差分 + vAttrID)
+//		using DiffCache = std::unordered_map<GLDiffID, int>;
 		using TechName = std::vector<std::vector<std::string>>;
 
+		GLXStruct		_result;		//!< 元になった構造体 (Effectファイル解析結果)
 		TechMap			_techMap;		//!< ゼロから設定を構築する場合の情報や頂点セマンティクス
-		DiffCache		_diffCache;		//!< セッティング差分を格納
+//		DiffCache		_diffCache;		//!< セッティング差分を格納
 		TechName		_techName;		//!< Tech名とPass名のセット
 
 		// --------------- 現在アクティブな設定 ---------------
@@ -180,13 +203,15 @@ class GLEffect : public IGLResource {
 		HLVb			_vBuffer[VData::MAX_STREAM];
 		HLIb			_iBuffer;
 		using TPID = boost::optional<int>;
-		TPID			_idTech, _idTechCur,
-						_idPass, _idPassCur;
+		TPID			_idTech,		//!< 移行予定のTechID
+						_idTechCur,		//!< 現在OpenGLにセットされているTechID
+						_idPass,		//!< 移行予定のPassID
+						_idPassCur;		//!< 現在OpenGLにセットされているPassID
 		bool			_bDefaultParam;	//!< Tech切替時、trueならデフォルト値読み込み
 		UniMapID		_uniMapID,		//!< 設定待ちのエントリ
 						_uniMapIDTmp;	//!< 設定し終わったエントリ
 		using TPRef = boost::optional<const TPStructR&>;
-		TPRef			_tps;
+		TPRef			_tps;			//!< 現在使用中のTech
 		TexIndex		_texIndex;		//!< [AttrID : TextureIndex]
 
 		enum REFLAG {
@@ -197,6 +222,7 @@ class GLEffect : public IGLResource {
 			REFL_ALL = 0x0f
 		};
 		uint32_t		_rflg = REFL_ALL;
+		bool			_bInit = false;		//!< deviceLost/Resetの状態区別
 
 		// ----- リフレッシュ関数 -----
 		void _refreshProgram();
@@ -206,7 +232,10 @@ class GLEffect : public IGLResource {
 
 	public:
 		//! Effectファイル(gfx)を読み込む
+		/*! フォーマットの解析まではするがGLリソースの確保はしない */
 		GLEffect(const std::string& fPath);
+		void onDeviceLost() override;
+		void onDeviceReset() override;
 
 		//! GLEffectで発生する例外基底
 		struct EC_Base : std::runtime_error {

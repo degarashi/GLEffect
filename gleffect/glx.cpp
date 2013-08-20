@@ -149,25 +149,24 @@ TPStructR::TPStructR() {}
 TPStructR::TPStructR(TPStructR&& tp) {
 	swap(tp);
 }
+#define TPR_SWAP(z,data,elem) boost::swap(elem, data.elem);
+#define SEQ_TPR_SWAP (_prog)(_vAttrID)(_setting)(_noDefValue)(_defValue)(_bInit)(_attrL)(_varyL)(_constL)(_unifL)
 void TPStructR::swap(TPStructR& t) noexcept {
-	boost::swap(_prog, t._prog);
-	boost::swap(_vAttrID, t._vAttrID);
-	boost::swap(_setting, t._setting);
+	BOOST_PP_SEQ_FOR_EACH(TPR_SWAP, t, SEQ_TPR_SWAP)
 }
 bool TPStructR::findSetting(const Setting& s) const {
 	auto itr = std::find(_setting.begin(), _setting.end(), s);
 	return itr!=_setting.end();
 }
-TPStructR TPStructR::calcDiff(const TPStructR& from, const TPStructR& to) {
+SettingList TPStructR::CalcDiff(const TPStructR& from, const TPStructR& to) {
 	// toと同じ設定がfrom側にあればスキップ
 	// fromに無かったり、異なっていればエントリに加える
-	TPStructR ret;
+	SettingList ret;
 	for(auto& s : to._setting) {
 		if(!from.findSetting(s)) {
-			ret._setting.push_back(s);
+			ret.push_back(s);
 		}
 	}
-	std::copy(to._vAttrID, to._vAttrID+countof(_vAttrID), ret._vAttrID);
 	return std::move(ret);
 }
 
@@ -248,11 +247,10 @@ GLEffect::GLEffect(const std::string& fPath) {
 	std::istreambuf_iterator<char> bItrB(ifs), bItrE;
 	std::string str(bItrB, bItrE);
 	auto itr = str.cbegin();
-	GLXStruct result;
-	bool bS = boost::spirit::qi::phrase_parse(itr, str.cend(), glx, standard::space, result);
+	bool bS = boost::spirit::qi::phrase_parse(itr, str.cend(), glx, standard::space, _result);
 #ifdef DEBUG
 	// テスト表示
-	result.output(std::cout);
+	_result.output(std::cout);
 	if(bS)
 		std::cout << "------- analysis succeeded! -------" << std::endl;
 	else
@@ -267,21 +265,50 @@ GLEffect::GLEffect(const std::string& fPath) {
 
 	// Tech/Passを順に実行形式へ変換
 	// (一緒にTech/Pass名リストを構築)
-	int nI = result.tpL.size();
+	int nI = _result.tpL.size();
 	_techName.resize(nI);
 	for(int techID=0 ; techID<nI ; techID++) {
 		auto& nmm = _techName[techID];
-		auto& tpTech = result.tpL.at(techID);
+		auto& tpTech = _result.tpL.at(techID);
 		// Pass毎に処理
-		int nJ = result.tpL[techID].tpL.size();
+		int nJ = _result.tpL[techID].tpL.size();
 		nmm.resize(nJ+1);
 		nmm[0] = tpTech.name;
 		for(int passID=0 ; passID<nJ ; passID++) {
 			nmm[passID+1] = tpTech.tpL.at(passID).get().name;
-			_techMap.insert(std::make_pair(GL16ID(techID, passID), TPStructR(result, techID, passID)));
+			_techMap.insert(std::make_pair(GL16ID(techID, passID), TPStructR(_result, techID, passID)));
 		}
 	}
 	GL_ACheck()
+}
+void GLEffect::onDeviceLost() {
+	if(_bInit) {
+		_bInit = false;
+		for(auto& p : _techMap)
+			p.second.ts_onDeviceLost();
+
+		if(!_idTech)
+			_idTech = _idTechCur;
+		if(!_idPass)
+			_idPass = _idPassCur;
+		_idTechCur = _idPassCur = boost::none;
+		_bDefaultParam = true;
+		_tps = boost::none;
+		_texIndex.clear();
+		_rflg = REFL_ALL;
+
+		// セットされているUniform変数を未セット状態にする
+		for(auto& p : _uniMapIDTmp)
+			_uniMapID.insert(p);
+		_uniMapIDTmp.clear();
+	}
+}
+void GLEffect::onDeviceReset() {
+	if(!_bInit) {
+		_bInit = true;
+		for(auto& p : _techMap)
+			p.second.ts_onDeviceReset();
+	}
 }
 void GLEffect::setVDecl(UPVDecl&& decl) {
 	_spVDecl = std::move(decl);
@@ -490,7 +517,6 @@ const UniMapID& GLEffect::getUniformMap() {
 	_refreshUniform();
 	return _uniMapIDTmp;
 }
-
 namespace {
 	class TPSDupl {
 		using TPList = std::vector<const TPStruct*>;
@@ -557,8 +583,8 @@ namespace {
 				}
 				return ret;
 			}
-			using MacroPair = std::pair<std::string, std::string>;
-			using MacroMap = std::map<std::string, std::string>;
+			using MacroMap = TPStructR::MacroMap;
+			using MacroPair = MacroMap::value_type;
 			MacroMap exportMacro() const {
 				MacroMap mm;
 				for(auto itr=_tpList.rbegin() ; itr!=_tpList.rend() ; itr++) {
@@ -606,7 +632,6 @@ namespace {
 				return std::move(ret);
 			}
 	};
-
 	template <class DST, class SRC>
 	void OutputS(DST& dst, const SRC& src) {
 		for(auto& p : src) {
@@ -663,34 +688,32 @@ TPStructR::TPStructR(const GLXStruct& gs, int tech, int pass) {
 	std::stringstream ss;
 	TPSDupl dupl(gs, tech, pass);
 	HLSh shP[ShType::NUM_SHTYPE];
-	std::vector<const AttrEntry*> attL;
-	std::vector<const UnifEntry*> unifL;
 	for(int i=0 ; i<countof(selectSh) ; i++) {
 		auto* shp = selectSh[i];
 		if(!shp)
 			continue;
 
 		{
-			auto macro = dupl.exportMacro();
-			for(auto& p : macro)
+			// マクロを定義をGLSLソースに出力
+			auto mc = dupl.exportMacro();
+			for(auto& p : mc)
 				ss << "#define " << p.first << ' ' << p.second << std::endl;
 		}
 		if(i==ShType::VERTEX) {
-			// attL: 後で頂点関連付けにも使う
-			attL = dupl.exportEntries<AttrStruct,AttrEntry>(GLBlocktype_::attributeT, &GLXStruct::atM);
-			for(auto& p : attL) {
-				p->output(ss);
-				ss << std::endl;
-			}
+			// Attribute定義は頂点シェーダの時だけ出力
+			_attrL = dupl.exportEntries<AttrStruct,AttrEntry>(GLBlocktype_::attributeT, &GLXStruct::atM);
+			OutputS(ss, _attrL);
 		}
-		{	auto varL = dupl.exportEntries<VaryStruct,VaryEntry>(GLBlocktype_::varyingT, &GLXStruct::varM);
-			OutputS(ss, varL); }
-		{	auto csL = dupl.exportEntries<ConstStruct,ConstEntry>(GLBlocktype_::constT, &GLXStruct::csM);
-			OutputS(ss, csL); }
-
-		// Uniformリストは後で使う
-		unifL = dupl.exportEntries<UnifStruct,UnifEntry>(GLBlocktype_::uniformT, &GLXStruct::uniM);
-		OutputS(ss, unifL);
+		// それぞれ変数ブロックをGLSLソースに出力
+		// :Varying
+		_varyL = dupl.exportEntries<VaryStruct,VaryEntry>(GLBlocktype_::varyingT, &GLXStruct::varM);
+		OutputS(ss, _varyL);
+		// :Const
+		_constL = dupl.exportEntries<ConstStruct,ConstEntry>(GLBlocktype_::constT, &GLXStruct::csM);
+		OutputS(ss, _constL);
+		// :Uniform
+		_unifL = dupl.exportEntries<UnifStruct,UnifEntry>(GLBlocktype_::uniformT, &GLXStruct::uniM);
+		OutputS(ss, _unifL);
 
 		const ShStruct& s = gs.shM.at(shp->shName);
 		// シェーダー引数の型チェック
@@ -700,11 +723,12 @@ TPStructR::TPStructR(const GLXStruct& gs, int tech, int pass) {
 			boost::apply_visitor(acheck, a);
 		acheck.finalizeCheck();
 
-		// main()関数に書き換え
+		// 関数名はmain()に書き換え
 		ss << "void main() {" << s.info << '}' << std::endl;
-
+#ifdef DEBUG
 		std::cout << ss.str();
 		std::cout.flush();
+#endif
 		shP[i] = mgr_gl.makeShader(c_glShFlag[i], ss.str());
 
 		ss.str("");
@@ -712,28 +736,42 @@ TPStructR::TPStructR(const GLXStruct& gs, int tech, int pass) {
 	}
 	// シェーダーのリンク処理
 	_prog = mgr_gl.makeProgram(shP[0].get(), shP[1].get(), shP[2].get());
+	// OpenGLステート設定リストを形成
+	SettingList sl = dupl.exportSetting();
+	_setting.swap(sl);
+}
+void TPStructR::ts_onDeviceLost() {
+	AAssert(_bInit)
+	_bInit = false;
+	// OpenGLのリソースが絡んでる変数を消去
+	std::memset(_vAttrID, 0xff, sizeof(_vAttrID));
+	_noDefValue.clear();
+	_defValue.clear();
+}
+void TPStructR::ts_onDeviceReset() {
+	AAssert(!_bInit)
+	_bInit = true;
+	auto& prog = *_prog.cref();
+	prog.onDeviceReset();
+
 	// 頂点AttribIDを無効な値で初期化
 	for(auto& v : _vAttrID)
 		v = -2;	// 初期値=-2, クエリの無効値=-1
-	for(auto& p : attL) {
+	for(auto& p : _attrL) {
 		// 頂点セマンティクス対応リストを生成
 		// セマンティクスの重複はエラー
 		auto& atID = _vAttrID[p->sem];
 		if(atID != -2)
 			throw GLE_LogicalError((boost::format("duplication of vertex semantics \"%1% : %2%\"") % p->name % GLSem_::cs_typeStr[p->sem]).str());
-		atID = glGetAttribLocation(_prog.cref()->getProgramID(), p->name.c_str());
+		atID = glGetAttribLocation(prog.getProgramID(), p->name.c_str());
 		GL_ACheck()
 		// -1の場合は警告を出す(もしかしたらシェーダー内で使ってないだけかもしれない)
 	}
 
-	// OpenGLステート設定リストを形成
-	SettingList sl = dupl.exportSetting();
-	_setting.swap(sl);
-
 	// Uniform変数にデフォルト値がセットしてある物をリストアップ
 	Visitor visitor;
 	visitor.pgID = _prog.cref()->getProgramID();
-	for(const auto* p : unifL) {
+	for(const auto* p : _unifL) {
 		if(p->defStr) {
 			// 変数名をIDに変換
 			if(visitor.setKey(p->name))
@@ -742,8 +780,6 @@ TPStructR::TPStructR(const GLXStruct& gs, int tech, int pass) {
 			_noDefValue.insert(p->name);
 	}
 	_defValue.swap(visitor.result);
-
-	applySetting();
 }
 
 void TPStructR::applySetting() const {
