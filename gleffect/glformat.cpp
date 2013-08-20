@@ -3,7 +3,7 @@
 GLFormat::GLFormat(GLenum fmt): value(fmt) {}
 bool GLFormat::Check(GLenum fmt, ID id) {
 	auto itr = s_idMap.find(FmtID(id,fmt));
-	return itr != s_idMap.end() && boost::get<ID>(itr->second) == id;
+	return itr != s_idMap.end() && boost::get<uint32_t>(itr->second) == Invalid;
 }
 GLFormat::ID GLFormat::QueryFormat(GLenum fmt, ID tag) {
 	FmtID id(tag, fmt);
