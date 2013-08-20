@@ -39,7 +39,7 @@ HEADERS  += mainwindow.h \
 	gldefine.hpp \
 	dgassert.hpp \
     glformat.hpp \
-    glformat_macro.hpp
+    glformat_const.hpp
 
 FORMS    += mainwindow.ui
 

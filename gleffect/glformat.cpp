@@ -1,5 +1,4 @@
-#include "glformat.hpp"
-#include "glformat_macro.hpp"
+#include "glformat_const.hpp"
 // ------------------------- GLFormat -------------------------
 GLFormat::GLFormat(GLenum fmt): value(fmt) {}
 bool GLFormat::Check(GLenum fmt, ID id) {
@@ -16,7 +15,7 @@ GLFormat::ID GLFormat::QueryFormat(GLenum fmt, ID tag) {
 GLFormat::OPInfo GLFormat::QueryInfo(GLenum fmt) {
 	auto itr = s_idMap.find(FmtID(Query_Info, fmt));
 	if(itr != s_idMap.end())
-		return boost::get<GLFormatInfo>(itr->second);
+		return boost::get<GLFormatDesc>(itr->second);
 	return boost::none;
 }
 uint32_t GLFormat::QuerySize(GLenum typ) {
@@ -24,6 +23,12 @@ uint32_t GLFormat::QuerySize(GLenum typ) {
 	if(itr != s_idMap.end())
 		return boost::get<uint32_t>(itr->second);
 	return 0;
+}
+GLFormat::OPGLSLInfo GLFormat::QueryGLSLInfo(GLenum fmt) {
+	auto itr = s_idMap.find(FmtID(Query_GLSLTypeInfo, fmt));
+	if(itr != s_idMap.end())
+		return boost::get<GLSLFormatDesc>(itr->second);
+	return boost::none;
 }
 
 GLenum GLFormat::get() const { return value; }
@@ -62,8 +67,6 @@ GLenum GLFormatV::get() const {
 #define ADD_FMTID1(z, data, elem)			ADD_IDMAP(data, elem, Invalid)
 #define ADD_FMTID_ALL(z, data, elem)		ADD_IDMAP(Query_All, elem, data)
 #define ADD_FMTID_DSC(z, data, elem)		ADD_IDMAP(Query_DSC, elem, data)
-#define ADD_FMTINFO(z, data, elem)			s_idMap.insert(std::make_pair(FmtID(Query_Info, BOOST_PP_TUPLE_ELEM(0,elem)), GLFormatInfo(BOOST_PP_TUPLE_ELEM(1,elem), BOOST_PP_TUPLE_ELEM(2,elem), BOOST_PP_TUPLE_ELEM(3,elem))));
-#define ADD_FMTID_TYPESIZE(z, data, elem)      ADD_IDMAP(Query_TypeSize, BOOST_PP_TUPLE_ELEM(0, elem), sizeof(BOOST_PP_TUPLE_ELEM(1,elem)))
 GLFormat::IDMap GLFormat::s_idMap(4096);
 void GLFormat::InitMap() {
 	// フォーマット判定用エントリ
@@ -95,6 +98,10 @@ void GLFormat::InitMap() {
 	BOOST_PP_SEQ_FOR_EACH(ADD_FMTID_DSC, Stencil, PSEQ_STENCILFORMAT)
 	BOOST_PP_SEQ_FOR_EACH(ADD_FMTID_DSC, Depth, PSEQ_DEPTHFORMAT)
 
-	BOOST_PP_SEQ_FOR_EACH(ADD_FMTINFO, NOTHING, SEQ_FORMATLIST)
-	BOOST_PP_SEQ_FOR_EACH(ADD_FMTID_TYPESIZE, NOTHING, SEQ_TYPELIST)
+	for(auto& p : c_GLFormatList)
+		s_idMap.insert(std::make_pair(FmtID(Query_Info, p.first), p.second));
+	for(auto& p : c_GLTypeList)
+		s_idMap.insert(std::make_pair(FmtID(Query_TypeSize, p.first), p.second));
+	for(auto& p : c_GLSLTypeList)
+		s_idMap.insert(std::make_pair(FmtID(Query_GLSLTypeInfo, p.first), p.second));
 }
