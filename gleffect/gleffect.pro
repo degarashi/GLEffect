@@ -25,8 +25,8 @@ SOURCES += main.cpp\
 	glx_parse2.cpp \
 	glassert.cpp \
 	glresource.cpp \
-    glframebuffer.cpp \
-    glformat.cpp
+	glframebuffer.cpp \
+	glformat.cpp
 
 HEADERS  += mainwindow.h \
 	glext.h \
@@ -38,16 +38,21 @@ HEADERS  += mainwindow.h \
 	testgl.hpp \
 	gldefine.hpp \
 	dgassert.hpp \
-    glformat.hpp \
-    glformat_const.hpp \
-    common.hpp 
+	glformat.hpp \
+	glformat_const.hpp \
+	common.hpp 
 
 FORMS    += mainwindow.ui
 
 CONFIG += c++11
 QMAKE_CXXFLAGS_DEBUG += -DDEBUG -ggdb3 -Wno-sequence-point -Wno-unused-parameter -Wno-unused-variable
+QMAKE_CXXFLAGS_RELEASE += -O3
+QMAKE_CXXFLAGS += -stdlib=libc++
 QMAKE_CXX = 'clang++'
-QMAKE_LINK = clang++
-LIBS += -lGLU -lspinner
-QMAKE_LIBDIR += /tmp/spinner_build/
-QMAKE_INCDIR += ./spinner/
+QMAKE_LINK = 'clang++'
+LIBS += -lGLU -lboomstick -lspinner -lboost_system -lc++
+QMAKE_LIBDIR += /tmp/spinner_build/ \
+				/tmp/boomstick_build/
+QMAKE_INCDIR += ./boomstick/ \
+				./spinner/ \
+				/usr/local/include/c++/v1/
