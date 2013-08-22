@@ -391,9 +391,7 @@ void GLEffect::_refreshProgram() {
 		_uniMapIDTmp.clear();
 		if(_bDefaultParam) {
 			// デフォルト値読み込み
-			const auto& def = tps.getUniformDefault();
-			for(auto& ent : def)
-				_uniMapID.insert(ent);
+			_uniMapID = tps.getUniformDefault();
 		} else
 			_uniMapID.clear();
 
