@@ -11,6 +11,7 @@ using namespace boom::geo2d;
 int main(int argc, char *argv[]) {
 	std::unique_ptr<GLRes> glRes(new GLRes());
 	std::unique_ptr<RigidMgrGL> glRM(new RigidMgrGL(IItg::sptr(new itg::ImpEular)));
+	GLFormat::InitMap();
 
 	QApplication app(argc, argv);
 	MainWindow mwin;
