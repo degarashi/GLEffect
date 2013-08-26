@@ -40,6 +40,18 @@ struct _Rect {
 			return false;
 		return true;
 	}
+	void shrinkRight(const T& s) {
+		x1 = std::max(x0, x1-s);
+	}
+	void shrinkBottom(const T& s) {
+		y1 = std::max(y0, y1-s);
+	}
+	void shrinkLeft(const T& s) {
+		x0 = std::min(x1, x0+s);
+	}
+	void shrinkTop(const T& s) {
+		y0 = std::min(y1, y0+s);
+	}
 	_Size<T> size() const {
 		return _Size<T>(width(), height());
 	}
