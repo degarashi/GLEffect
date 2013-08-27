@@ -402,6 +402,9 @@ class IGLTexture : public IGLResource {
 		static bool IsMipmap(State level);
 		bool isMipmap() const;
 		bool isCubemap() const;
+
+		//! 内容をファイルに保存 (主にデバッグ用)
+		bool save(const QString& path);
 };
 DEF_GLRESOURCE_INNER(IGLTexture, (setFilter)(setAnisotropicCoeff)(setUVWrap))
 

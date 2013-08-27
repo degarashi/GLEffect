@@ -1,6 +1,7 @@
 #include <GL/gl.h>
 #include <GL/glu.h>
 #include "glresource.hpp"
+#include <QFile>
 
 // ------------------------- IGLTexture -------------------------
 DEF_GLRESOURCE_CPP(IGLTexture)
@@ -40,9 +41,20 @@ GLint IGLTexture::getTextureID() const { return _idTex; }
 void IGLTexture::setActiveID(GLuint n) { _actID = n; }
 bool IGLTexture::isMipmap() const { return  IsMipmap(_mipLevel); }
 bool IGLTexture::isCubemap() const { return _texFlag != GL_TEXTURE_2D; }
-
 bool IGLTexture::IsMipmap(State level) {
 	return level >= MipmapNear;
+}
+bool IGLTexture::save(const QString& path) {
+	size_t sz = _size.width * _size.height * GLFormat::QueryByteSize(GL_RGBA8, GL_UNSIGNED_BYTE);
+	ByteBuff buff(sz);
+	// OpenGL ES2では無効
+	auto u = use();
+	glGetTexImage(GL_TEXTURE_2D, 0, GL_BGRA, GL_UNSIGNED_BYTE, &buff[0]);
+	u->end();
+	GL_Check()
+
+	QImage img(&buff[0], _size.width, _size.height, QImage::Format_ARGB32);
+	return img.save(path);
 }
 IGLTexture::Inner1& IGLTexture::setAnisotropicCoeff(float coeff) {
 	_coeff = coeff;
