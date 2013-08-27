@@ -116,6 +116,7 @@ class TestGL : public OpenGLWindow {
 		void mouseMoveEvent(QMouseEvent* e) override;
 		void mouseReleaseEvent(QMouseEvent* e) override;
 	public:
+		static SPVDecl s_vDecl2D;
 		TestGL();
 		~TestGL();
 		void initialize() override;

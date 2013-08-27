@@ -103,6 +103,7 @@ void Arrow::draw(GLEffect* glf, MStack& ms) {
 	id = glf->getUniformID("tDiffuse");
 	glf->setUniform(_hlTex, id);
 
+	glf->setVDecl(TestGL::s_vDecl2D);
 	glf->setVStream(_hlVb.get(), 0);
 	glf->setIStream(_hlIb.get());
 	glf->drawIndexed(GL_TRIANGLES, 6, 0);
@@ -182,6 +183,7 @@ void Actor::draw(GLEffect* glf, MStack& ms) {
 	id = glf->getUniformID("tDiffuse");
 	glf->setUniform(_hlTex, id);
 
+	glf->setVDecl(TestGL::s_vDecl2D);
 	glf->setVStream(_hlVb.get(), 0);
 	glf->setIStream(_hlIb.get());
 	glf->drawIndexed(GL_TRIANGLES, 6, 0);
@@ -202,7 +204,13 @@ void TestGL::_release() {
 		_rmID[0] = invalid;
 	}
 }
-
+// 頂点フォーマット定義
+SPVDecl TestGL::s_vDecl2D(
+	new VDecl{
+			{0,0, GL_FLOAT, GL_FALSE, 3, (GLuint)VSem::POSITION},
+			{0,12, GL_FLOAT, GL_FALSE, 4, (GLuint)VSem::TEXCOORD0}
+	}
+);
 void TestGL::initialize() {
 	mgr_gl.onDeviceReset();
 	_hlFx = mgr_gl.loadEffect(QString(BASE_PATH) + "/test.glx");
@@ -220,13 +228,6 @@ void TestGL::initialize() {
 	GLint passID = pFx->getPassID("P0");
 	GL_ACheck()
 	pFx->setPass(passID);
-	GL_ACheck()
-	// 頂点フォーマット定義
-	SPVDecl decl(new VDecl{
-		{0,0, GL_FLOAT, GL_FALSE, 3, (GLuint)VSem::POSITION},
-		{0,12, GL_FLOAT, GL_FALSE, 4, (GLuint)VSem::TEXCOORD0}
-	});
-	pFx->setVDecl(decl);
 	GL_ACheck()
 	pFx->setUniform(spn::Vec4{1,2,3,4}, pFx->getUniformID("lowVal"));
 
