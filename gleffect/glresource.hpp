@@ -440,7 +440,7 @@ class TexFile : public IGLTexture {
 		bool operator == (const TexFile& t) const;
 };
 
-//! ユーザー定義のユニークテクスチャ
+//! ユーザー定義のユニークテクスチャ (QImage由来)
 /*! DeviceReset時:
 	QImage使用時: 一旦バッファにコピーして後で復元
 	空テクスチャ時: 何もしない	*/
@@ -457,14 +457,35 @@ class TexUser : public IGLTexture {
 		bool operator == (const TexUser& t) const;
 };
 //! ユーザー定義の空テクスチャ
+/*! テクスチャへの書き込みなどサポート
+	DeviceLost時の復元は任意
+	内部バッファはDeviceLost用であり、DeviceがActiveな時はnone
+	フォーマット変換は全てOpenGLにさせる */
 class TexEmpty : public IGLTexture {
 	using OPBuff = boost::optional<ByteBuff>;
-	OPBuff	_buff;	//!< DeviceLost時用のバッファ。有効なら復元
+	using OPFormat = boost::optional<GLTypeFmt>;
+
+	OPBuff		_buff;			//!< DeviceLost時用のバッファ (Restoreフラグを兼ねる)
+	OPFormat	_typeFormat;	//!< _buffに格納されているデータの形式(Type)
+	//! テクスチャフォーマットから必要なサイズを計算してバッファを用意する
+	void _prepareBuffer();
+
 	public:
 		TexEmpty(const Size& size, GLInSizedFmt fmt, bool bRestore=false);
 		void onDeviceLost() override;
 		void onDeviceReset() override;
 		bool operator == (const TexEmpty& t) const;
+
+		//! テクスチャ全部書き換え = バッファも置き換え
+		/*! \param[in] fmt テクスチャのフォーマット
+			\param[in] srcFmt 入力フォーマット(Type)
+			\param[in] bRestore trueなら内部バッファにコピーを持っておいてDeviceLostに備える */
+		void writeData(GLInSizedFmt fmt, AB_Byte buff, int width, GLTypeFmt srcFmt, bool bRestore);
+		//! 部分的に書き込み
+		/*! \param[in] ofsX 書き込み先オフセット X
+			\param[in] ofsY 書き込み先オフセット Y
+			\param[in] srcFmt 入力フォーマット(Type) */
+		void writeRect(AB_Byte buff, int width, int ofsX, int ofsY, GLTypeFmt srcFmt);
 };
 
 //! デバッグ用テクスチャ模様生成インタフェース
