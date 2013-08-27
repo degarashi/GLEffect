@@ -25,8 +25,9 @@ SOURCES += main.cpp\
 	glx_parse2.cpp \
 	glassert.cpp \
 	glresource.cpp \
-    glframebuffer.cpp \
-    glformat.cpp
+	glframebuffer.cpp \
+	glformat.cpp \
+	font_common.cpp
 
 HEADERS  += mainwindow.h \
 	glext.h \
@@ -38,9 +39,10 @@ HEADERS  += mainwindow.h \
 	testgl.hpp \
 	gldefine.hpp \
 	dgassert.hpp \
-    glformat.hpp \
-    glformat_const.hpp \
-    common.hpp 
+	glformat.hpp \
+	common.hpp \
+	font_base.hpp \
+    lane.hpp
 
 FORMS    += mainwindow.ui
 

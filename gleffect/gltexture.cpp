@@ -1,6 +1,7 @@
 #include <GL/gl.h>
 #include <GL/glu.h>
 #include "glresource.hpp"
+#include <QFile>
 
 // ------------------------- IGLTexture -------------------------
 DEF_GLRESOURCE_CPP(IGLTexture)
@@ -40,9 +41,20 @@ GLint IGLTexture::getTextureID() const { return _idTex; }
 void IGLTexture::setActiveID(GLuint n) { _actID = n; }
 bool IGLTexture::isMipmap() const { return  IsMipmap(_mipLevel); }
 bool IGLTexture::isCubemap() const { return _texFlag != GL_TEXTURE_2D; }
-
 bool IGLTexture::IsMipmap(State level) {
 	return level >= MipmapNear;
+}
+bool IGLTexture::save(const QString& path) {
+	size_t sz = _size.width * _size.height * GLFormat::QueryByteSize(GL_RGBA8, GL_UNSIGNED_BYTE);
+	ByteBuff buff(sz);
+	// OpenGL ES2では無効
+	auto u = use();
+	glGetTexImage(GL_TEXTURE_2D, 0, GL_BGRA, GL_UNSIGNED_BYTE, &buff[0]);
+	u->end();
+	GL_Check()
+
+	QImage img(&buff[0], _size.width, _size.height, QImage::Format_ARGB32);
+	return img.save(path);
 }
 IGLTexture::Inner1& IGLTexture::setAnisotropicCoeff(float coeff) {
 	_coeff = coeff;
@@ -181,15 +193,18 @@ bool TexUser::operator == (const TexUser& t) const {
 // ------------------------- TexEmpty -------------------------
 TexEmpty::TexEmpty(const Size& size, GLInSizedFmt fmt, bool bRestore): IGLTexture(fmt, false) {
 	_size = size;
-	if(bRestore) {
-		// DeviceLost時に内容を復元するタイプならバッファを確保しておく
-		auto& info = *GLFormat::QueryInfo(fmt);
-		_buff = ByteBuff(size.width * size.height * GLFormat::QuerySize(info.toType) * info.numType);
-	}
+	if(bRestore)
+		_prepareBuffer();
+}
+void TexEmpty::_prepareBuffer() {
+	auto& info = *GLFormat::QueryInfo(_format);
+	_typeFormat = info.toType;
+	_buff = ByteBuff(_size.width * _size.height * GLFormat::QuerySize(info.toType) * info.numType);
 }
 void TexEmpty::onDeviceLost() {
 	if(_idTex != 0) {
 		if(_buff) {
+			_prepareBuffer();
 			auto& info = *GLFormat::QueryInfo(_format);
 #ifdef USE_OPENGLES2
 			//	OpenGL ES2ではglTexImage2Dが実装されていないのでFramebufferにセットしてglReadPixelsで取得
@@ -210,14 +225,71 @@ void TexEmpty::onDeviceReset() {
 		if(_buff) {
 			// バッファの内容から復元
 			auto u = use();
-			auto& info = *GLFormat::QueryInfo(_format);
-			glTexImage2D(GL_TEXTURE_2D, 0, _format.get(), _size.width, _size.height, 0, _format.get(), info.toType, &_buff->operator [](0));
+			glTexImage2D(GL_TEXTURE_2D, 0, _format.get(), _size.width, _size.height, 0, _format.get(), _typeFormat.get(), &_buff->operator [](0));
 			u->end();
+
+			// DeviceがActiveな時はバッファを空にしておく
+			_buff = boost::none;
+			_typeFormat = boost::none;
 		}
 	}
 }
 bool TexEmpty::operator == (const TexEmpty& t) const {
 	return getTextureID() == t.getTextureID();
+}
+
+// DeviceLostの時にこのメソッドを読んでも無意味
+void TexEmpty::writeData(GLInSizedFmt fmt, AB_Byte buff, int width, GLTypeFmt srcFmt, bool bRestore) {
+	// 内部バッファは一旦リセット
+	_buff = boost::none;
+	_typeFormat = boost::none;
+
+	int height = buff.getSize() / width;
+	_size = Size(width, height);
+	_format = fmt;
+	// バッファ容量がサイズ以上かチェック
+	auto szInput = GLFormat::QuerySize(srcFmt);
+	Assert(buff.getSize() >= width*height*szInput)
+	// DeviceLost中でなければすぐにテクスチャを作成するが、そうでなければ内部バッファにコピーするのみ
+	if(_idTex != 0) {
+		// テクスチャに転送
+		glTexImage2D(GL_TEXTURE_2D, 0, _format.get(), _size.width, _size.height, 0, fmt.get(), srcFmt.get(), buff.getPtr());
+		GL_Check()
+	} else {
+		if(bRestore) {
+			// 内部バッファへmove
+			_buff = ByteBuff();
+			buff.setTo(*_buff);
+			_typeFormat = srcFmt;
+		}
+	}
+}
+void TexEmpty::writeRect(AB_Byte buff, int width, int ofsX, int ofsY, GLTypeFmt srcFmt) {
+	int height = buff.getSize() / width;
+	if(_idTex != 0) {
+		// GLテクスチャに転送
+		glTexSubImage2D(GL_TEXTURE_2D, 0, ofsX, ofsY, width, height, _format.get(), srcFmt.get(), buff.getPtr());
+		GL_Check()
+	} else {
+		// 内部バッファが存在すればそこに書き込んでおく
+		if(_buff) {
+			// でもフォーマットが違う時は警告だけ出して何もしない
+			if(*_typeFormat != srcFmt)
+				WarnArg(false, "テクスチャのフォーマットが違うので部分的に書き込めない")
+			else {
+				auto& b = *_buff;
+				auto* dst = &b[_size.width * ofsY + ofsX];
+				auto* src = buff.getPtr();
+				// 1画素のバイト数
+				size_t sz = GLFormat::QueryByteSize(_format.get(), _typeFormat.get());
+				for(int i=0 ; i<height ; i++) {
+					std::memcpy(dst, src, width);
+					dst += _size.width;
+					src += sz;
+				}
+			}
+		}
+	}
 }
 
 // ------------------------- TexDebug -------------------------

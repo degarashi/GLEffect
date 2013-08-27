@@ -3,6 +3,12 @@
 GLRes::GLRes() {
 	_bInit = false;
 	_upFb.reset(new GLFBuffer());
+
+	// EmptyTexture = 1x1の単色テクスチャ
+	_hlEmptyTex.reset(new HLTex(createTexture(Size(1,1), GL_RGBA8, true)));
+	uint32_t buff1 = 0xffffffff;
+	auto* t = reinterpret_cast<TexEmpty*>(_hlEmptyTex->ref().get());
+	t->writeData(GL_RGBA8, AB_Byte(&buff1, 1), 1, GL_UNSIGNED_BYTE, true);
 }
 GLRes::~GLRes() {
 	onDeviceLost();
@@ -58,6 +64,9 @@ HLProg GLRes::makeProgram(HSh vsh, HSh gsh, HSh psh) {
 }
 GLFBufferTmp& GLRes::getTmpFramebuffer() const {
 	return *_tmpFb;
+}
+HTex GLRes::getEmptyTexture() const {
+	return _hlEmptyTex->get();
 }
 
 bool GLRes::deviceStatus() const {

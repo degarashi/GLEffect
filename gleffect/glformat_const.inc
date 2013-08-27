@@ -1,6 +1,3 @@
-#pragma once
-#include "glformat.hpp"
-
 // (GLフォーマット型, 保存する時のType, 1画素に使うType数, BaseFormatにする場合の型)
 const static std::pair<GLenum, GLFormatDesc> c_GLFormatList[] = {
 	{GL_R8, {GL_UNSIGNED_BYTE, 1, GL_RED}},
@@ -101,14 +98,6 @@ const static std::pair<GLenum, size_t> c_GLTypeList[] = {
 	{GL_UNSIGNED_INT_5_9_9_9_REV, sizeof(GLuint)},
 	{GL_FLOAT_32_UNSIGNED_INT_24_8_REV, sizeof(GLuint)}
 };
-
-constexpr uint32_t MakeDim() {
-	return 0;
-}
-template <class T0, class... Ts>
-constexpr uint32_t MakeDim(T0 t, Ts... ts) {
-	return (t << (sizeof...(ts)*3)) | MakeDim(ts...);
-}
 
 const static std::pair<GLenum, GLSLFormatDesc> c_GLSLTypeList[] = {
 	{GL_FLOAT, {GLSLType::FloatT, MakeDim(1), false, false}},

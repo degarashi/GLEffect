@@ -19,7 +19,12 @@ using SizeF = _Size<float>;
 //! 任意の型の2D矩形
 template <class T>
 struct _Rect {
-	T	x0, x1, y0, y1;
+	union {
+		struct {
+			T	x0, x1, y0, y1;
+		};
+		T	ar[4];
+	};
 
 	_Rect() = default;
 	_Rect(const _Rect& r) = default;
@@ -40,8 +45,26 @@ struct _Rect {
 			return false;
 		return true;
 	}
+	void shrinkRight(const T& s) {
+		x1 = std::max(x0, x1-s);
+	}
+	void shrinkBottom(const T& s) {
+		y1 = std::max(y0, y1-s);
+	}
+	void shrinkLeft(const T& s) {
+		x0 = std::min(x1, x0+s);
+	}
+	void shrinkTop(const T& s) {
+		y0 = std::min(y1, y0+s);
+	}
 	_Size<T> size() const {
 		return _Size<T>(width(), height());
+	}
+	template <class T2>
+	_Rect& operator *= (const T2& t) {
+		for(auto& a : ar)
+			a *= t;
+		return *this;
 	}
 };
 using Rect = _Rect<int>;
