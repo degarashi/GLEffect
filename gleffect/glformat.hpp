@@ -131,9 +131,15 @@ class GLFormat {
 		GLFormat(GLenum fmt);
 		GLenum get() const;
 		static bool Check(GLenum fmt, ID id);
+		//! fmtに対応するGLFormat::IDを検索
 		static ID QueryFormat(GLenum fmt, ID tag);
+		//! Formatに関する様々な情報を引き出す
 		static OPInfo QueryInfo(GLenum fmt);
-		static uint32_t QuerySize(GLenum typ);
+		//! GLTypeFmtのバイト数
+		static size_t QuerySize(GLenum typ);
+		//! fmtをtypで保存した場合の1画素のバイト数を計算
+		static size_t QueryByteSize(GLenum fmt, GLenum typ);
+
 		static OPGLSLInfo QueryGLSLInfo(GLenum fmt);
 
 		static void InitMap();

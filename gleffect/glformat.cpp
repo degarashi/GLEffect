@@ -18,12 +18,16 @@ GLFormat::OPInfo GLFormat::QueryInfo(GLenum fmt) {
 		return boost::get<GLFormatDesc>(itr->second);
 	return boost::none;
 }
-uint32_t GLFormat::QuerySize(GLenum typ) {
+size_t GLFormat::QuerySize(GLenum typ) {
 	auto itr = s_idMap.find(FmtID(Query_TypeSize, typ));
 	if(itr != s_idMap.end())
 		return boost::get<uint32_t>(itr->second);
 	return 0;
 }
+size_t GLFormat::QueryByteSize(GLenum fmt, GLenum typ) {
+	return QueryInfo(fmt)->numType * QuerySize(typ);
+}
+
 GLFormat::OPGLSLInfo GLFormat::QueryGLSLInfo(GLenum fmt) {
 	auto itr = s_idMap.find(FmtID(Query_GLSLTypeInfo, fmt));
 	if(itr != s_idMap.end())
