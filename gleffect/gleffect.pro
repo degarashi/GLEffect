@@ -40,7 +40,6 @@ HEADERS  += mainwindow.h \
 	gldefine.hpp \
 	dgassert.hpp \
 	glformat.hpp \
-	glformat_const.hpp \
 	common.hpp \
 	font_base.hpp \
     lane.hpp

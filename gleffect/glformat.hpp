@@ -6,6 +6,7 @@
 #include <unordered_map>
 #include <functional>
 #include "glhead.hpp"
+#include "spinner/misc.hpp"
 
 //! 圧縮フォーマット
 #define PSEQ_COMPRESSED		(GL_COMPRESSED_RED)(GL_COMPRESSED_RG)(GL_COMPRESSED_RGB)(GL_COMPRESSED_RGBA)(GL_COMPRESSED_SRGB)(GL_COMPRESSED_SRGB_ALPHA) \
@@ -120,7 +121,7 @@ class GLFormat {
 		// フォーマット判定: (32bit:種別 32bit:OpenGLフォーマット値) -> ID(種別) 本当は0固定でも良い
 		// フォーマット検索: (32bit: Query_??? 32bit:OpenGLフォーマット値) -> ID(種別)
 		using IDMap = std::unordered_map<FmtID, boost::variant<uint32_t,GLFormatDesc, GLSLFormatDesc>>;
-		static IDMap s_idMap;
+		static IDMap* s_idMap;
 
 	public:
 		using OPInfo = boost::optional<const GLFormatDesc&>;
@@ -142,7 +143,8 @@ class GLFormat {
 
 		static OPGLSLInfo QueryGLSLInfo(GLenum fmt);
 
-		static void InitMap();
+		static void Initialize();
+		static void Terminate();
 };
 #define DEF_FMTCHECK(z,data,elem)	template <> struct data<elem> { \
 	constexpr static bool valid=true; };
@@ -162,6 +164,8 @@ DEF_CHECKER(TypeFmtCheck, GLFormat::Type, SEQ_TYPE)
 
 #undef DEF_CHECKER
 #undef DEF_FMTCHECK
+
+DEF_NIFTY_INITIALIZER(GLFormat)
 
 /*! 何らかの有効なフォーマット値が保証されている */
 template <template <unsigned> class Chk>

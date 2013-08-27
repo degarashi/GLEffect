@@ -1,7 +1,6 @@
 #include "testgl.hpp"
 
 GLRes::GLRes() {
-	GLFormat::InitMap();
 	_bInit = false;
 	_upFb.reset(new GLFBuffer());
 
