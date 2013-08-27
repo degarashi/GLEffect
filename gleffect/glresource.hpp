@@ -270,6 +270,9 @@ class GLRes : public spn::ResMgrN<UPResource, GLRes> {
 	using base_type = spn::ResMgrN<UPResource, GLRes>;
 	UPFBuffer						_upFb;
 	std::unique_ptr<GLFBufferTmp>	_tmpFb;
+	//! 空のテクスチャ (何もテクスチャをセットしない事を示す)
+	/*! デバッグで色を変えたりしてチェックできる */
+	std::unique_ptr<AnotherLHandle<UPTexture>>	_hlEmptyTex;
 	//! DeviceLost/Resetの状態管理
 	bool	_bInit;
 
@@ -314,6 +317,7 @@ class GLRes : public spn::ResMgrN<UPResource, GLRes> {
 		//! インデックスバッファの確保
 		AnotherLHandle<UPIBuffer> makeIBuffer(GLuint dtype);
 
+		AnotherSHandle<UPTexture> getEmptyTexture() const;
 		LHdl _common(const QString& key, std::function<UPResource()> cb);
 		GLFBufferTmp& getTmpFramebuffer() const;
 };
