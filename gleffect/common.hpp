@@ -19,7 +19,12 @@ using SizeF = _Size<float>;
 //! 任意の型の2D矩形
 template <class T>
 struct _Rect {
-	T	x0, x1, y0, y1;
+	union {
+		struct {
+			T	x0, x1, y0, y1;
+		};
+		T	ar[4];
+	};
 
 	_Rect() = default;
 	_Rect(const _Rect& r) = default;
@@ -54,6 +59,12 @@ struct _Rect {
 	}
 	_Size<T> size() const {
 		return _Size<T>(width(), height());
+	}
+	template <class T2>
+	_Rect& operator *= (const T2& t) {
+		for(auto& a : ar)
+			a *= t;
+		return *this;
 	}
 };
 using Rect = _Rect<int>;
