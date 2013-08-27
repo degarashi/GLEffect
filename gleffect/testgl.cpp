@@ -222,11 +222,11 @@ void TestGL::initialize() {
 	pFx->setPass(passID);
 	GL_ACheck()
 	// 頂点フォーマット定義
-	UPVDecl decl(new VDecl{
+	SPVDecl decl(new VDecl{
 		{0,0, GL_FLOAT, GL_FALSE, 3, (GLuint)VSem::POSITION},
 		{0,12, GL_FLOAT, GL_FALSE, 4, (GLuint)VSem::TEXCOORD0}
 	});
-	pFx->setVDecl(std::move(decl));
+	pFx->setVDecl(decl);
 	GL_ACheck()
 	pFx->setUniform(spn::Vec4{1,2,3,4}, pFx->getUniformID("lowVal"));
 
