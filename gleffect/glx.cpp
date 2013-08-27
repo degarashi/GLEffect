@@ -310,9 +310,11 @@ void GLEffect::onDeviceReset() {
 			p.second.ts_onDeviceReset();
 	}
 }
-void GLEffect::setVDecl(UPVDecl&& decl) {
-	_spVDecl = std::move(decl);
-	_rflg |= REFL_VSTREAM;
+void GLEffect::setVDecl(const SPVDecl &decl) {
+	if(_spVDecl.get() != decl.get()) {
+		_spVDecl = decl;
+		_rflg |= REFL_VSTREAM;
+	}
 }
 void GLEffect::setVStream(HVb vb, int n) {
 	_vBuffer[n] = vb;
@@ -797,7 +799,7 @@ void TPStructR::applySetting() const {
 const UniMapID& TPStructR::getUniformDefault() const { return _defValue; }
 const UniEntryMap& TPStructR::getUniformEntries() const { return _noDefValue; }
 
-void TPStructR::setVertex(const UPVDecl& vdecl, const HLVb (&stream)[VData::MAX_STREAM]) const {
+void TPStructR::setVertex(const SPVDecl &vdecl, const HLVb (&stream)[VData::MAX_STREAM]) const {
 	vdecl->apply(VData(stream, _vAttrID));
 }
 const HLProg& TPStructR::getProgram() const { return _prog; }

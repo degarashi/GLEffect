@@ -10,7 +10,7 @@ using UPResource = std::unique_ptr<IGLResource>;
 class GLEffect;
 using UPEffect = std::unique_ptr<GLEffect>;
 class VDecl;
-using UPVDecl = std::unique_ptr<VDecl>;
+using SPVDecl = std::shared_ptr<VDecl>;
 class TPStructR;
 class GLBuffer;
 using UPBuffer = std::unique_ptr<GLBuffer>;
