@@ -148,12 +148,12 @@ class GLBuffer : public IGLResource {
 					_drawType,			//!< STATIC_DRAWなどのフラグ
 					_stride,			//!< 要素1つのバイトサイズ
 					_idBuff;			//!< OpenGLバッファID
-		ByteBuff	_buff;				//!< 再構築の際に必要となるデータ実体
+		spn::ByteBuff	_buff;			//!< 再構築の際に必要となるデータ実体
 
 	protected:
 		// 全域を書き換え
 		Inner1& initData(const void* src, size_t nElem, GLuint stride);
-		Inner1& initData(ByteBuff&& buff, GLuint stride);
+		Inner1& initData(spn::ByteBuff&& buff, GLuint stride);
 		// 部分的に書き換え
 		Inner1& updateData(const void* src, size_t nElem, GLuint offset);
 		static void Use(GLBuffer& b);
@@ -183,8 +183,8 @@ class GLIBuffer : public GLBuffer {
 	protected:
 		Inner1& initData(const GLubyte* src, size_t nElem);
 		Inner1& initData(const GLushort* src, size_t nElem);
-		Inner1& initData(ByteBuff&& buff);
-		Inner1& initData(const U16Buff& buff);
+		Inner1& initData(spn::ByteBuff&& buff);
+		Inner1& initData(const spn::U16Buff& buff);
 
 		Inner1& updateData(const GLushort* src, size_t nElem, GLuint offset);
 		Inner1& updateData(const GLubyte* src, size_t nElem, GLuint offset);
@@ -469,7 +469,7 @@ class TexUser : public IGLTexture {
 	内部バッファはDeviceLost用であり、DeviceがActiveな時はnone
 	フォーマット変換は全てOpenGLにさせる */
 class TexEmpty : public IGLTexture {
-	using OPBuff = boost::optional<ByteBuff>;
+	using OPBuff = boost::optional<spn::ByteBuff>;
 	using OPFormat = boost::optional<GLTypeFmt>;
 
 	OPBuff		_buff;			//!< DeviceLost時用のバッファ (Restoreフラグを兼ねる)
@@ -487,12 +487,12 @@ class TexEmpty : public IGLTexture {
 		/*! \param[in] fmt テクスチャのフォーマット
 			\param[in] srcFmt 入力フォーマット(Type)
 			\param[in] bRestore trueなら内部バッファにコピーを持っておいてDeviceLostに備える */
-		void writeData(GLInSizedFmt fmt, AB_Byte buff, int width, GLTypeFmt srcFmt, bool bRestore);
+		void writeData(GLInSizedFmt fmt, spn::AB_Byte buff, int width, GLTypeFmt srcFmt, bool bRestore);
 		//! 部分的に書き込み
 		/*! \param[in] ofsX 書き込み先オフセット X
 			\param[in] ofsY 書き込み先オフセット Y
 			\param[in] srcFmt 入力フォーマット(Type) */
-		void writeRect(AB_Byte buff, int width, int ofsX, int ofsY, GLTypeFmt srcFmt);
+		void writeRect(spn::AB_Byte buff, int width, int ofsX, int ofsY, GLTypeFmt srcFmt);
 };
 
 //! デバッグ用テクスチャ模様生成インタフェース
@@ -582,7 +582,7 @@ class GLRBuffer : public IGLResource {
 		GLuint		_idRbo;
 		OnLost		_behLost;
 
-		using Res = boost::variant<boost::none_t, spn::Vec4, ByteBuff>;
+		using Res = boost::variant<boost::none_t, spn::Vec4, spn::ByteBuff>;
 		Res				_restoreInfo;
 		GLTypeFmt		_buffFmt;
 		GLFormatV		_fmt;

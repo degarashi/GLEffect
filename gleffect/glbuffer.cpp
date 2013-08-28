@@ -46,7 +46,7 @@ GLBuffer::Inner1& GLBuffer::initData(const void* src, size_t nElem, GLuint strid
 	glBufferData(_buffType, _buff.size(), &_buff[0], _drawType);
 	return Inner1::Cast(this);
 }
-GLBuffer::Inner1& GLBuffer::initData(ByteBuff&& buff, GLuint stride) {
+GLBuffer::Inner1& GLBuffer::initData(spn::ByteBuff&& buff, GLuint stride) {
 	_stride = stride;
 	_buff.swap(buff);
 	glBufferData(_buffType, _buff.size(), &_buff[0], _drawType);
@@ -71,11 +71,11 @@ GLIBuffer::Inner1& GLIBuffer::initData(const GLushort* src, size_t nElem) {
 	GLBuffer::initData(src, nElem, sizeof(GLushort));
 	return Inner1::Cast(this);
 }
-GLIBuffer::Inner1& GLIBuffer::initData(ByteBuff&& buff) {
-	GLBuffer::initData(std::forward<ByteBuff>(buff), sizeof(GLubyte));
+GLIBuffer::Inner1& GLIBuffer::initData(spn::ByteBuff&& buff) {
+	GLBuffer::initData(std::forward<spn::ByteBuff>(buff), sizeof(GLubyte));
 	return Inner1::Cast(this);
 }
-GLIBuffer::Inner1& GLIBuffer::initData(const U16Buff& buff) {
+GLIBuffer::Inner1& GLIBuffer::initData(const spn::U16Buff& buff) {
 	GLBuffer::initData(reinterpret_cast<const void*>(&buff[0]), buff.size(), sizeof(GLushort));
 	return Inner1::Cast(this);
 }

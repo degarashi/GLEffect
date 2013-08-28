@@ -62,7 +62,7 @@ const GLRBuffer::F_LOST GLRBuffer::cs_onLost[] = {
 					break;
 			}
 		}
-		ByteBuff buff(texSize * rb._width * rb._height);
+		spn::ByteBuff buff(texSize * rb._width * rb._height);
 		glReadPixels(0, 0, rb._width, rb._height, rb._fmt.get(), rb._buffFmt.get(), &buff[0]);
 		rb._restoreInfo = std::move(buff);
 		fbi.end();
@@ -79,7 +79,7 @@ const GLRBuffer::F_LOST GLRBuffer::cs_onReset[] = {
 		fbi.end();
 	},
 	[](GLFBufferTmp& fb, GLRBuffer& rb) {		// RESTORE
-		auto& buff = boost::get<ByteBuff>(rb._restoreInfo);
+		auto& buff = boost::get<spn::ByteBuff>(rb._restoreInfo);
 		auto fbi = fb->attachColor(0, rb._idRbo);
 		glDrawPixels(0,0, rb._fmt.get(), rb._buffFmt, &buff[0]);
 		rb._restoreInfo = boost::none;

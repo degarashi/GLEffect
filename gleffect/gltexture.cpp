@@ -46,7 +46,7 @@ bool IGLTexture::IsMipmap(State level) {
 }
 bool IGLTexture::save(const QString& path) {
 	size_t sz = _size.width * _size.height * GLFormat::QueryByteSize(GL_RGBA8, GL_UNSIGNED_BYTE);
-	ByteBuff buff(sz);
+	spn::ByteBuff buff(sz);
 	// OpenGL ES2では無効
 	auto u = use();
 	glGetTexImage(GL_TEXTURE_2D, 0, GL_BGRA, GL_UNSIGNED_BYTE, &buff[0]);
@@ -199,7 +199,7 @@ TexEmpty::TexEmpty(const Size& size, GLInSizedFmt fmt, bool bRestore): IGLTextur
 void TexEmpty::_prepareBuffer() {
 	auto& info = *GLFormat::QueryInfo(_format);
 	_typeFormat = info.toType;
-	_buff = ByteBuff(_size.width * _size.height * GLFormat::QuerySize(info.toType) * info.numType);
+	_buff = spn::ByteBuff(_size.width * _size.height * GLFormat::QuerySize(info.toType) * info.numType);
 }
 void TexEmpty::onDeviceLost() {
 	if(_idTex != 0) {
@@ -239,7 +239,7 @@ bool TexEmpty::operator == (const TexEmpty& t) const {
 }
 
 // DeviceLostの時にこのメソッドを読んでも無意味
-void TexEmpty::writeData(GLInSizedFmt fmt, AB_Byte buff, int width, GLTypeFmt srcFmt, bool bRestore) {
+void TexEmpty::writeData(GLInSizedFmt fmt, spn::AB_Byte buff, int width, GLTypeFmt srcFmt, bool bRestore) {
 	// 内部バッファは一旦リセット
 	_buff = boost::none;
 	_typeFormat = boost::none;
@@ -258,14 +258,16 @@ void TexEmpty::writeData(GLInSizedFmt fmt, AB_Byte buff, int width, GLTypeFmt sr
 	} else {
 		if(bRestore) {
 			// 内部バッファへmove
-			_buff = ByteBuff();
+			_buff = spn::ByteBuff();
 			buff.setTo(*_buff);
 			_typeFormat = srcFmt;
 		}
 	}
 }
-void TexEmpty::writeRect(AB_Byte buff, int width, int ofsX, int ofsY, GLTypeFmt srcFmt) {
-	int height = buff.getSize() / width;
+void TexEmpty::writeRect(spn::AB_Byte buff, int width, int ofsX, int ofsY, GLTypeFmt srcFmt) {
+	size_t bs = GLFormat::QueryByteSize(_format.get(), GL_UNSIGNED_BYTE);
+	auto sz = buff.getSize();
+	int height = sz / (width * bs);
 	if(_idTex != 0) {
 		// GLテクスチャに転送
 		glTexSubImage2D(GL_TEXTURE_2D, 0, ofsX, ofsY, width, height, _format.get(), srcFmt.get(), buff.getPtr());
