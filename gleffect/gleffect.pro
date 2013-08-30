@@ -42,7 +42,8 @@ HEADERS  += mainwindow.h \
 	glformat.hpp \
 	common.hpp \
 	font_base.hpp \
-    lane.hpp
+    lane.hpp \
+    updator.hpp
 
 FORMS    += mainwindow.ui
 
