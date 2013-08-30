@@ -48,11 +48,11 @@ bool IGLTexture::save(const QString& path) {
 	size_t sz = _size.width * _size.height * GLFormat::QueryByteSize(GL_RGBA8, GL_UNSIGNED_BYTE);
 	spn::ByteBuff buff(sz);
 	// OpenGL ES2では無効
-	auto u = use();
-	glGetTexImage(GL_TEXTURE_2D, 0, GL_BGRA, GL_UNSIGNED_BYTE, &buff[0]);
-	u->end();
-	GL_Check()
-
+	{
+		auto u = use();
+		glGetTexImage(GL_TEXTURE_2D, 0, GL_BGRA, GL_UNSIGNED_BYTE, &buff[0]);
+		u->end();
+	}
 	QImage img(&buff[0], _size.width, _size.height, QImage::Format_ARGB32);
 	return img.save(path);
 }
@@ -224,10 +224,12 @@ void TexEmpty::onDeviceReset() {
 	if(_onDeviceReset()) {
 		if(_buff) {
 			// バッファの内容から復元
-			auto u = use();
-			glTexImage2D(GL_TEXTURE_2D, 0, _format.get(), _size.width, _size.height, 0, _format.get(), _typeFormat.get(), &_buff->operator [](0));
-			u->end();
-
+			{
+				auto u = use();
+				GLenum baseFormat = GLFormat::QueryInfo(_format.get())->toBase;
+				glTexImage2D(GL_TEXTURE_2D, 0, _format.get(), _size.width, _size.height, 0, baseFormat, _typeFormat.get(), &_buff->operator [](0));
+				u->end();
+			}
 			// DeviceがActiveな時はバッファを空にしておく
 			_buff = boost::none;
 			_typeFormat = boost::none;
@@ -269,9 +271,11 @@ void TexEmpty::writeRect(spn::AB_Byte buff, int width, int ofsX, int ofsY, GLTyp
 	auto sz = buff.getSize();
 	int height = sz / (width * bs);
 	if(_idTex != 0) {
+		auto u = use();
 		// GLテクスチャに転送
-		glTexSubImage2D(GL_TEXTURE_2D, 0, ofsX, ofsY, width, height, _format.get(), srcFmt.get(), buff.getPtr());
-		GL_Check()
+		GLenum baseFormat = GLFormat::QueryInfo(_format.get())->toBase;
+		glTexSubImage2D(GL_TEXTURE_2D, 0, ofsX, ofsY, width, height, baseFormat, srcFmt.get(), buff.getPtr());
+		u->end();
 	} else {
 		// 内部バッファが存在すればそこに書き込んでおく
 		if(_buff) {
