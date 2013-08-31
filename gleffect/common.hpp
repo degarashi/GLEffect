@@ -12,6 +12,11 @@ struct _Size {
 	_Size(const T& w, const T& h): width(w), height(h) {}
 	template <class T2>
 	_Size(const _Size<T2>& s): width(s.width), height(s.height) {}
+	_Size& operator *= (const T& s) {
+		width *= s;
+		height *= s;
+		return *this;
+	}
 };
 using Size = _Size<uint32_t>;
 using SizeF = _Size<float>;
