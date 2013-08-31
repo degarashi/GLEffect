@@ -105,6 +105,10 @@ class LaneAlloc : public ILaneAlloc {
 		/*! \return 容量不足で確保できない時はfalse */
 		bool alloc(LaneRaw& dst, size_t w) override {
 			auto id = _GetLayerID(w);
+			if(++id.second >= NLayer1) {
+				++id.first;
+				id.second = 0;
+			}
 			if(_dispenseFromLane(dst, id.first, id.second, w))
 				return true;
 
@@ -113,7 +117,7 @@ class LaneAlloc : public ILaneAlloc {
 			uint32_t lsb1 = spn::Bit::LSB_N(flag1);
 			if(lsb1 == MaxBit) {
 				// Layer1レベルでは空きが無いのでLayer0探索
-				uint32_t flag0 = _flagL0 & ~((1 << id.first) - 1);
+				uint32_t flag0 = _flagL0 & ~((1 << (id.first+1)) - 1);
 				int lsb0 = spn::Bit::LSB_N(flag0);
 				if(lsb0 == MaxBit) {
 					// 空き容量不足
