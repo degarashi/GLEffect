@@ -43,17 +43,21 @@ GLBuffer::Inner1& GLBuffer::initData(const void* src, size_t nElem, GLuint strid
 	_stride = stride;
 	_buff.resize(nElem*_stride);
 	std::memcpy(&_buff[0], src, nElem*_stride);
-	glBufferData(_buffType, _buff.size(), &_buff[0], _drawType);
+	if(_idBuff != 0)
+		glBufferData(_buffType, _buff.size(), &_buff[0], _drawType);
 	return Inner1::Cast(this);
 }
 GLBuffer::Inner1& GLBuffer::initData(spn::ByteBuff&& buff, GLuint stride) {
 	_stride = stride;
 	_buff.swap(buff);
-	glBufferData(_buffType, _buff.size(), &_buff[0], _drawType);
+	if(_idBuff != 0)
+		glBufferData(_buffType, _buff.size(), &_buff[0], _drawType);
 	return Inner1::Cast(this);
 }
 GLBuffer::Inner1& GLBuffer::updateData(const void* src, size_t nElem, GLuint offset) {
-	glBufferSubData(_buffType, offset*_stride, nElem*_stride, src);
+	std::memcpy(&_buff[0]+offset, src, nElem*_stride);
+	if(_idBuff != 0)
+		glBufferSubData(_buffType, offset*_stride, nElem*_stride, src);
 	return Inner1::Cast(this);
 }
 
