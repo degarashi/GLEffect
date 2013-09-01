@@ -1,4 +1,5 @@
 *~
 build-qtglsl-*/
-sample.png
 *.pro.user*
+gleffect/data/*
+!gleffect/data/test.glx
