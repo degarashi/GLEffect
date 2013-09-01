@@ -31,8 +31,8 @@ struct ValueSettingR {
 	template <class GF, class... Ts>
 	void action(GF gf, Ts...) const {
 		// valueのサイズがsizeof...(Ts)と同じ前提
-		const auto* ptr = value + sizeof...(Ts);
-		gf(boost::get<Ts>(*(--ptr))...);
+		const auto* ptr = value;// + sizeof...(Ts);
+		gf(boost::get<Ts>(*(ptr++))...);
 	}
 	bool operator == (const ValueSettingR& s) const;
 };
