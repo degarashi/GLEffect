@@ -33,3 +33,6 @@ void CharPlane::rectAlloc(LaneRaw& dst, int width) {
 		Assert(_lalloc->alloc(dst, width))
 	}
 }
+const PowSize& CharPlane::getSurfaceSize() const {
+	return _sfcSize;
+}
