@@ -8,16 +8,10 @@
 #include "spinner/matstack.hpp"
 #include "spinner/pose.hpp"
 #include "boomstick/rigid2D.hpp"
+#include "updator.hpp"
+#include "font.hpp"
 
 extern QString BASE_PATH;
-// -------------- 間に合わせ実装。後でちゃんとした物にする --------------
-using MStack = spn::MatStack<spn::Mat44, spn::MatStackTag::PushLeft>;
-struct IDraw {
-	virtual void draw(GLEffect* glf, MStack& ms) = 0;
-};
-struct IUpdate {
-	virtual void update(float dt) = 0;
-};
 
 #define mgr_rigidgl reinterpret_cast<RigidMgrGL&>(boom::geo2d::ModelMgr::_ref())
 class RigidMgrGL : public boom::geo2d::RigidRes, public boom::geo2d::RigidMgr {
@@ -36,7 +30,7 @@ class Joint : public boom::geo2d::IResist {
 		void resist(boom::geo2d::RForce::F& acc, const boom::geo2d::Rigid& r, int index, const boom::geo2d::CResult& cr) const override;
 };
 //! 矢印ポリゴン
-class Arrow : public IDraw {
+class Arrow : public IUpdate {
 	HLVb	_hlVb;
 	HLIb	_hlIb;
 	HLTex	_hlTex;
@@ -48,11 +42,11 @@ class Arrow : public IDraw {
 		Arrow();
 		void setFrom(const spn::Vec2& v);
 		void setTo(const spn::Vec2& v);
-		void draw(GLEffect* glf, MStack& ms) override;
+		void update(float dt) override;
 };
 
 //! 四角ポリゴン表示
-class Actor : public IDraw, public IUpdate, public spn::CheckAlign<16,Actor> {
+class Actor : public IUpdate, public spn::CheckAlign<16,Actor> {
 	HLVb		_hlVb;
 	HLIb		_hlIb;
 	HLTex		_hlTex;
@@ -66,24 +60,48 @@ class Actor : public IDraw, public IUpdate, public spn::CheckAlign<16,Actor> {
 		Actor(boom::geo2d::HMdl hMdl);
 		Actor(boom::geo2d::HMdl hMdl, const spn::Pose2D& ps);
 		~Actor();
-		void draw(GLEffect* glf, MStack& ms) override;
 		void update(float dt) override;
 		boom::geo2d::HRig getHRig() const;
 };
-using SPUpdate = std::shared_ptr<IUpdate>;
-using SPDraw = std::shared_ptr<IDraw>;
-using SPActor = std::shared_ptr<Actor>;
+//! 文字描画
+class TextDraw : public IUpdate {
+	HLText		_hlText;
+	spn::Vec2	_pos;
+	enum Pivot {
+		Left = 0x01,
+		Right = 0x02,
+		HCenter = 0x04,
+		Top = 0x08,
+		Bottom = 0x10,
+		VCenter = 0x20
+	};
+	uint32_t _pivot;
 
-class TestGL : public OpenGLWindow {
+	public:
+		TextDraw(HText hT);
+		void setPos(const spn::Vec2& p);
+		void setPivot(uint32_t flag);
+		void update(float dt) override;
+};
+
+#define mgr_test TestGL::_ref()
+class TestGL : public OpenGLWindow, public spn::Singleton<TestGL> {
 	Q_OBJECT
+
 	HLFx	_hlFx;
 	MStack	_mstack;
+	struct DrawAsset {
+		GLEffect	*gle;
+		MStack		&mstack;
+	};
+	FontGen _fontGen;
+
 	boom::geo2d::HLRig		_hlFloor[3];
 	constexpr static uint32_t invalid = ~0;
 	uint32_t				_rmID[3] = {invalid};
 
-	spn::noseq_list<SPUpdate, uint32_t>	_updL;
-	spn::noseq_list<SPDraw, uint32_t>	_drawL;
+	UpdGroup				_updG,
+							_drawG;
 	constexpr static float	_dt = 0.01f;
 	int						_nBox=3, _nIter=5;
 	boom::geo2d::HLMdl			_hlMdl;
@@ -122,6 +140,9 @@ class TestGL : public OpenGLWindow {
 		void initialize() override;
 		void render() override;
 		spn::Vec2 qtposToWorld(const spn::Vec2& pos);
+		DrawAsset getDrawAsset();
+		void addDraw(Priority prio, const SPUpdate& d);
+		void addUpd(Priority prio, const SPUpdate& d);
 
 	public slots:
 		void resetScene();
@@ -130,5 +151,4 @@ class TestGL : public OpenGLWindow {
 		void changeInitial(const SimInitial& in);
 
 		boom::geo2d::HRig getBox(const spn::Vec2& pos);
-		spn::noseq_list<SPDraw, uint32_t>& refDrawList();
 };

@@ -9,6 +9,33 @@ QString BASE_PATH("./data");
 
 using namespace boom::geo2d;
 using namespace spn;
+// ----------------------- TextDraw -----------------------
+TextDraw::TextDraw(HText hT): _hlText(hT), _pos(0), _pivot(Left|Top) {}
+void TextDraw::setPos(const Vec2& p) {
+	_pos = p;
+}
+void TextDraw::setPivot(uint32_t flag) {
+	_pivot = flag;
+}
+void TextDraw::update(float /*dt*/) {
+	auto da = mgr_test.getDrawAsset();
+	auto& t = _hlText.ref();
+	SizeF s = t.getSize();
+	s.width = 2.f / mgr_test.width();
+	s.height = 2.f / mgr_test.height();
+	Mat44 m = Mat44::Scaling(s.width, s.height, 1, 1);
+	m *= Mat44::Translation(Vec3(-1,1,0));
+	// オフセットの設定
+	GLint techID = da.gle->getTechID("TheFont");
+	da.gle->setTechnique(techID, true);
+	GLint passID = da.gle->getPassID("P0");
+	da.gle->setPass(passID);
+	GLint id = da.gle->getUniformID("mTrans");
+	da.gle->setUniform(m, id);
+
+	t.draw(da.gle);
+}
+
 // ----------------------- Joint -----------------------
 void Joint::setLcFrom(const Vec2& from) {
 	_lcFrom = from;
@@ -69,7 +96,8 @@ void Arrow::setFrom(const spn::Vec2& v) {
 void Arrow::setTo(const spn::Vec2& v) {
 	_vTo = v;
 }
-void Arrow::draw(GLEffect* glf, MStack& ms) {
+void Arrow::update(float /*dt*/) {
+	auto da = mgr_test.getDrawAsset();
 	Vec2 to(_vTo - _vFrom);
 	float len = to.length();
 	if(len < 1e-5f)
@@ -98,18 +126,23 @@ void Arrow::draw(GLEffect* glf, MStack& ms) {
 	};
 	_hlVb.ref()->use()->initData(tmpV, countof(tmpV), sizeof(TmpV));
 
-	GLint id = glf->getUniformID("mTrans");
-	glf->setUniform(ms.top(), id);
-	id = glf->getUniformID("tDiffuse");
-	glf->setUniform(_hlTex, id);
+	GLint techID = da.gle->getTechID("TheTech");
+	da.gle->setTechnique(techID, true);
+	GLint passID = da.gle->getPassID("P0");
+	da.gle->setPass(passID);
 
-	glf->setVDecl(TestGL::s_vDecl2D);
-	glf->setVStream(_hlVb.get(), 0);
-	glf->setIStream(_hlIb.get());
-	glf->drawIndexed(GL_TRIANGLES, 6, 0);
+	GLint id = da.gle->getUniformID("mTrans");
+	da.gle->setUniform(da.mstack.top(), id);
+	id = da.gle->getUniformID("tDiffuse");
+	da.gle->setUniform(_hlTex, id);
+
+	da.gle->setVDecl(TestGL::s_vDecl2D);
+	da.gle->setVStream(_hlVb.get(), 0);
+	da.gle->setIStream(_hlIb.get());
+	da.gle->drawIndexed(GL_TRIANGLES, 6, 0);
 	GL_ACheck()
 }
-
+// ----------------------- Actor -----------------------
 Actor::~Actor() {
 	mgr_rigidgl.remA(_rmID);
 }
@@ -173,27 +206,39 @@ Actor::Actor(HMdl hMdl, const spn::Pose2D& ps): Actor(hMdl) {
 	_hlRig.ref()->refPose().setOfs(ps.getOffset());
 }
 
-void Actor::update(float /*dt*/) {}
-void Actor::draw(GLEffect* glf, MStack& ms) {
-	auto& m = _hlRig.ref()->refPose().getToWorld();
-	ms.push(m.convert44());
+void Actor::update(float /*dt*/) {
+	auto da = mgr_test.getDrawAsset();
 
-	GLint id = glf->getUniformID("mTrans");
-	glf->setUniform(ms.top(), id);
-	id = glf->getUniformID("tDiffuse");
-	glf->setUniform(_hlTex, id);
-
-	glf->setVDecl(TestGL::s_vDecl2D);
-	glf->setVStream(_hlVb.get(), 0);
-	glf->setIStream(_hlIb.get());
-	glf->drawIndexed(GL_TRIANGLES, 6, 0);
+	GLint techID = da.gle->getTechID("TheTech");
+	GL_ACheck()
+	da.gle->setTechnique(techID, true);
+	GL_ACheck()
+	GLint passID = da.gle->getPassID("P0");
+	GL_ACheck()
+	da.gle->setPass(passID);
 	GL_ACheck()
 
-	ms.pop();
+	auto& m = _hlRig.ref()->refPose().getToWorld();
+	da.mstack.push(m.convert44());
+
+	GLint id = da.gle->getUniformID("mTrans");
+	da.gle->setUniform(da.mstack.top(), id);
+	id = da.gle->getUniformID("tDiffuse");
+	da.gle->setUniform(_hlTex, id);
+
+	da.gle->setVDecl(TestGL::s_vDecl2D);
+	da.gle->setVStream(_hlVb.get(), 0);
+	da.gle->setIStream(_hlIb.get());
+	da.gle->drawIndexed(GL_TRIANGLES, 6, 0);
+	GL_ACheck()
+
+	da.mstack.pop();
 }
+
 HRig Actor::getHRig() const { return _hlRig.get(); }
 
-TestGL::TestGL(): _spGrav(new resist::Gravity), _spAir(new resist::Air) {}
+// ---------------------- TestGL ----------------------
+TestGL::TestGL(): _fontGen({512,512}), _spGrav(new resist::Gravity), _spAir(new resist::Air) {}
 TestGL::~TestGL() {
 	_release();
 }
@@ -213,6 +258,7 @@ SPVDecl TestGL::s_vDecl2D(
 );
 void TestGL::initialize() {
 	mgr_gl.onDeviceReset();
+
 	_hlFx = mgr_gl.loadEffect(QString(BASE_PATH) + "/test.glx");
 	std::cout	<< "OpenGL Version: " << ::glGetString(GL_VERSION) << std::endl
 				<< "OpenGL Vendor: " << ::glGetString(GL_VENDOR) << std::endl
@@ -220,17 +266,6 @@ void TestGL::initialize() {
 				<< "GLSL Version: " << ::glGetString(GL_SHADING_LANGUAGE_VERSION) << std::endl
 				<< "Extensions: " << ::glGetString(GL_EXTENSIONS) << std::endl
 				<< "--------------------------------------------------------" << std::endl;
-	auto* pFx = _hlFx.ref().get();
-	GLint techID = pFx->getTechID("TheTech");
-	GL_ACheck()
-	pFx->setTechnique(techID, true);
-	GL_ACheck()
-	GLint passID = pFx->getPassID("P0");
-	GL_ACheck()
-	pFx->setPass(passID);
-	GL_ACheck()
-	pFx->setUniform(spn::Vec4{1,2,3,4}, pFx->getUniformID("lowVal"));
-
 	_spArrow = std::make_shared<Arrow>();
 	_spJoint = std::make_shared<Joint>();
 
@@ -261,16 +296,25 @@ void TestGL::render() {
 
 	for(int i=0 ; i<_nIter ; i++)
 		mgr_rigidgl.simulate(_dt/_nIter);
-	for(auto& sp : _updL)
-		sp->update(_dt);
-	auto* pFx = _hlFx.ref().get();
-	for(auto& sp : _drawL)
-		sp->draw(pFx, _mstack);
+	struct Visitor {
+		float _dt;
+		Visitor(float dt): _dt(dt) {}
+		bool operator()(const SPUpdate& sp) const {
+			return sp->update0(_dt);
+		}
+	};
+	Visitor v(_dt);
+	_updG.iterate(v);
+	_drawG.iterate(v);
 }
+TestGL::DrawAsset TestGL::getDrawAsset() {
+	return DrawAsset{_hlFx.ref().get(), _mstack};
+}
+
 void TestGL::resetScene() {
 	_release();
-	_updL.clear();
-	_drawL.clear();
+	_updG.clear();
+	_drawG.clear();
 
 	using spn::Vec2;
 	using spn::Pose2D;
@@ -288,10 +332,10 @@ void TestGL::resetScene() {
 
 	// 箱を用意
 	for(int i=0 ; i<_nBox ; i++) {
-		SPActor sp(Actor::NewS(_hlMdl.get(), Pose2D{Vec2(i*0.0f,i*0.31f), spn::DEGtoRAD(0.f), Vec2(1,1)}));
-		_updL.add(sp);
-		_drawL.add(sp);
-		auto& tmp = sp->getHRig().ref();
+		auto act(Actor::NewS(_hlMdl.get(), Pose2D{Vec2(i*0.0f,i*0.31f), spn::DEGtoRAD(0.f), Vec2(1,1)}));
+		SPUpdate sp(act);
+		_drawG.add(0x00, sp);
+		auto& tmp = act->getHRig().ref();
 		tmp->addR(_spGrav);
 		tmp->addR(_spAir);
 	}
@@ -340,7 +384,8 @@ void TestGL::mousePressEvent(QMouseEvent* e) {
 			_spJoint->setTo(r.getPose().getOffset());
 			_spJoint->setEnable(true);
 			hr.ref()->addR(_spJoint, 0xbeef);
-			_arrowID = _drawL.add(_spArrow);
+			_spArrow->setAsAlive();
+			_drawG.add(0x00, _spArrow);
 			_spArrow->setFrom(ptv);
 			_spArrow->setTo(ptv);
 			_hRig = hr;
@@ -359,7 +404,7 @@ void TestGL::mouseReleaseEvent(QMouseEvent* e) {
 	if(e->button() == Qt::LeftButton) {
 		if(_hRig) {
 			_spJoint->setEnable(false);
-			_drawL.rem(_arrowID);
+			_spArrow->destroy();
 			_hRig.ref()->remR(0xbeef);
 			_hRig = HRig();
 		}
@@ -397,6 +442,9 @@ Vec2 TestGL::qtposToWorld(const spn::Vec2& pos) {
 	AVec4 tmp = tposF + (tposB - tposF) * r;
 	return Vec2(tmp.x, tmp.y);
 }
-spn::noseq_list<SPDraw, uint32_t>& TestGL::refDrawList() {
-	return _drawL;
+void TestGL::addDraw(Priority prio, const SPUpdate& d) {
+	_drawG.add(prio, d);
+}
+void TestGL::addUpd(Priority prio, const SPUpdate& d) {
+	_updG.add(prio, d);
 }
