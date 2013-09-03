@@ -8,7 +8,7 @@ GLRes::GLRes() {
 	_hlEmptyTex.reset(new HLTex(createTexture(Size(1,1), GL_RGBA8, true)));
 	uint32_t buff1 = 0xffffffff;
 	auto* t = reinterpret_cast<TexEmpty*>(_hlEmptyTex->ref().get());
-	t->writeData(GL_RGBA8, AB_Byte(&buff1, 1), 1, GL_UNSIGNED_BYTE, true);
+	t->writeData(GL_RGBA8, spn::AB_Byte(&buff1, 1), 1, GL_UNSIGNED_BYTE, true);
 }
 GLRes::~GLRes() {
 	onDeviceLost();

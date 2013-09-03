@@ -120,4 +120,5 @@ class CharPlane {
 		/*! まだどこにも登録されてないcodeである事はFontArray_Depが保証する
 			\param[out] dst uv, hTexを書き込む */
 		void rectAlloc(LaneRaw& dst, int width);
+		const PowSize& getSurfaceSize() const;
 };

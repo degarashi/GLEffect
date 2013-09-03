@@ -27,7 +27,9 @@ SOURCES += main.cpp\
 	glresource.cpp \
 	glframebuffer.cpp \
 	glformat.cpp \
-	font_common.cpp
+	font_common.cpp \
+	font_qt_dep.cpp \
+	fontgen.cpp
 
 HEADERS  += mainwindow.h \
 	glext.h \
@@ -41,8 +43,11 @@ HEADERS  += mainwindow.h \
 	dgassert.hpp \
 	glformat.hpp \
 	common.hpp \
+	font_qt_dep.hpp \
 	font_base.hpp \
-    lane.hpp
+	font.hpp \
+    lane.hpp \
+    updator.hpp
 
 FORMS    += mainwindow.ui
 

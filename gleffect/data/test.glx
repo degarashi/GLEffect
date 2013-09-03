@@ -1,0 +1,97 @@
+/* */
+uniform TheBaseUnif {
+	lowp float lowVal = 1000;
+}
+// ただし継承元に同じ名前の変数があったらエラー
+uniform TheUnif : TheBaseUnif {
+	highp float testVal = [1 2 3 4];
+	mat4 mTrans;
+	sampler2D tDiffuse;
+}
+
+const TheConst {
+	mediump float cons = 1234;
+}
+attribute TheBaseAttr {
+	highp vec3 atPos : POSITION;
+}
+attribute TheAttr : TheBaseAttr {
+	highp vec4 atTex : TEXCOORD0;
+}
+varying TheVary {
+	highp vec4 vrTex;
+}
+vertexshader TheVS() {
+	vec4 v = vec4(atPos,1);
+	gl_Position = v * mTrans;
+	vrTex = atTex;
+}
+pixelshader ThePS(vec4 val) {
+	gl_FragColor = texture2D(tDiffuse, vrTex.xy);
+}
+
+technique TheBaseTech {
+	Attribute = TheAttr;
+}
+
+// 継承したTechのPassで記述されたものに関しては関知しない
+// +=とすれば継承元に加える
+// = とすると置き換え
+// 便宜上Techを継承した形。Passが何かを継承は無理
+technique TheTech : TheBaseTech {
+	Blend = true;
+	CullFace = false;
+	LineWidth = 1 2 3 4;
+	DepthTest = true;
+	DepthRange = 0 1;
+	DepthFunc = lessequal;
+	DepthMask = true;
+	Attribute += TheAttr;
+	Varying = TheVary;
+	Const = TheConst;
+	Uniform = TheUnif, TheBaseUnif;
+	Macro {
+		Tekito = 256;
+		ThisIsKusoge;
+	}
+	pass P0 {
+		VertexShader = TheVS();
+		PixelShader = ThePS([1000 1 2 3]);
+	}
+}
+
+attribute FontAttr {
+	highp vec2 atPos : POSITION;
+	highp vec2 atTex : TEXCOORD0;
+}
+varying FontVary {
+	highp vec2 vrTex;
+}
+uniform FontUnif {
+	mat4 mTrans;
+	sampler2D tDiffuse;	
+}
+vertexshader FontVS() {
+	vec4 v = vec4(atPos, 1, 1);
+	gl_Position = v * mTrans;
+	vrTex = atTex;
+}
+pixelshader FontPS() {
+	gl_FragColor = texture2D(tDiffuse, vrTex.xy);
+}
+technique TheFont {
+	Blend = true;
+	BlendFunc = srcalpha invsrcalpha;
+	CullFace = false;
+	DepthTest = true;
+	DepthRange = 0 1;
+	DepthMask = false;
+	DepthFunc = lessequal;
+	Attribute = FontAttr;
+	Varying = FontVary;
+	Uniform = FontUnif;
+	pass P0 {
+		VertexShader = FontVS();
+		PixelShader = FontPS();
+	}
+}

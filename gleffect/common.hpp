@@ -12,6 +12,11 @@ struct _Size {
 	_Size(const T& w, const T& h): width(w), height(h) {}
 	template <class T2>
 	_Size(const _Size<T2>& s): width(s.width), height(s.height) {}
+	_Size& operator *= (const T& s) {
+		width *= s;
+		height *= s;
+		return *this;
+	}
 };
 using Size = _Size<uint32_t>;
 using SizeF = _Size<float>;
@@ -82,7 +87,9 @@ struct PP_Lower {
 template <class T>
 struct PP_Higher {
 	static T proc(const T& t) {
-		T ret = spn::Bit::LowClear(t) << 1;
+		T ret = spn::Bit::LowClear(t);
+		if(t & ~ret)
+			ret <<= 1;
 		return std::max(T(1), ret);
 	}
 };

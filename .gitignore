@@ -2,3 +2,4 @@
 build-qtglsl-*/
 *.pro.user*
 gleffect/data/*
+!gleffect/data/test.glx
