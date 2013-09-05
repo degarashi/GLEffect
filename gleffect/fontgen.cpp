@@ -76,6 +76,9 @@ const SPVDecl TextObj::cs_vDecl(
 TextObj::TextObj(Face& face, std::u32string&& s): _text(std::move(s)), _coreID(face.coreID), _faceName(face.faceName) {
 	_init(face);
 }
+TextObj::TextObj(TextObj&& t): _text(std::move(t._text)), _drawSet(std::move(t._drawSet)),
+	_coreID(std::move(t._coreID)), _faceName(std::move(t._faceName)), _rectSize(std::move(t._rectSize)) {}
+
 void TextObj::_init(Face& face) {
 	int height = face.dep.height();
 	// CharPosリストの作成
