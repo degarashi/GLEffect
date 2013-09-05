@@ -472,7 +472,8 @@ class TexEmpty : public IGLTexture {
 	using OPBuff = boost::optional<spn::ByteBuff>;
 	using OPFormat = boost::optional<GLTypeFmt>;
 
-	OPBuff		_buff;			//!< DeviceLost時用のバッファ (Restoreフラグを兼ねる)
+	bool		_bRestore;
+	OPBuff		_buff;			//!< DeviceLost時用のバッファ
 	OPFormat	_typeFormat;	//!< _buffに格納されているデータの形式(Type)
 	//! テクスチャフォーマットから必要なサイズを計算してバッファを用意する
 	void _prepareBuffer();

@@ -14,4 +14,5 @@
 #undef GLDEFINE
 
 extern void LoadGLFunc();
+extern bool IsGLFuncLoaded();
 extern void SetSwapInterval(int n);

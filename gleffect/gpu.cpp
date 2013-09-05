@@ -94,8 +94,9 @@ void GPUTime::onFrameEnd() {
 	if(sync != nullptr) {
 		glClientWaitSync(sync, GL_SYNC_FLUSH_COMMANDS_BIT, 0);
 		GLuint bEnd = GL_FALSE;
-		glGetQueryObjectuiv(q, GL_QUERY_RESULT_AVAILABLE, &bEnd);
-		assert(bEnd == GL_TRUE);
+		do {
+			glGetQueryObjectuiv(q, GL_QUERY_RESULT_AVAILABLE, &bEnd);
+		} while(bEnd == GL_FALSE);
 		glGetQueryObjectui64v(q, GL_QUERY_RESULT, &_prevTime);
 		glDeleteSync(sync);
 		_idSync[_cursor] = nullptr;

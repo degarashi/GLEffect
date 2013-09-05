@@ -17,6 +17,7 @@ IGLTexture::IGLTexture(GLInSizedFmt fmt, bool bCube):
 void IGLTexture::Use(IGLTexture& t) {
 	glActiveTexture(GL_TEXTURE0 + t._actID);
 	glBindTexture(t._texFlag, t._idTex);
+	GL_ACheck()
 }
 void IGLTexture::End(IGLTexture& t) {
 	GL_ACheck()
@@ -85,7 +86,6 @@ void IGLTexture::onDeviceLost() {
 	if(_idTex != 0) {
 		glDeleteTextures(1, &_idTex);
 		_idTex = 0;
-		_size = Size(0,0);
 		GL_ACheck()
 	}
 }
@@ -191,10 +191,8 @@ bool TexUser::operator == (const TexUser& t) const {
 	return boost::apply_visitor(MyCompare(), _image, t._image);
 }
 // ------------------------- TexEmpty -------------------------
-TexEmpty::TexEmpty(const Size& size, GLInSizedFmt fmt, bool bRestore): IGLTexture(fmt, false) {
+TexEmpty::TexEmpty(const Size& size, GLInSizedFmt fmt, bool bRestore): IGLTexture(fmt, false), _bRestore(bRestore) {
 	_size = size;
-	if(bRestore)
-		_prepareBuffer();
 }
 void TexEmpty::_prepareBuffer() {
 	auto& info = *GLFormat::QueryInfo(_format);
@@ -203,7 +201,7 @@ void TexEmpty::_prepareBuffer() {
 }
 void TexEmpty::onDeviceLost() {
 	if(_idTex != 0) {
-		if(_buff) {
+		if(_bRestore) {
 			_prepareBuffer();
 			auto& info = *GLFormat::QueryInfo(_format);
 #ifdef USE_OPENGLES2
@@ -214,7 +212,9 @@ void TexEmpty::onDeviceLost() {
 			glReadPixels(0, 0, _size.width, _size.height, info.toBase, info.toType, &_buff->operator[](0));
 			u.attachColor(0, 0);
 #else
+			auto u = use();
 			glGetTexImage(GL_TEXTURE_2D, 0, info.toBase, info.toType, &_buff->operator[](0));
+			u->end();
 #endif
 		}
 		IGLTexture::onDeviceLost();
@@ -222,18 +222,19 @@ void TexEmpty::onDeviceLost() {
 }
 void TexEmpty::onDeviceReset() {
 	if(_onDeviceReset()) {
-		if(_buff) {
+		auto u = use();
+		if(_bRestore && _buff) {
 			// バッファの内容から復元
-			{
-				auto u = use();
-				GLenum baseFormat = GLFormat::QueryInfo(_format.get())->toBase;
-				glTexImage2D(GL_TEXTURE_2D, 0, _format.get(), _size.width, _size.height, 0, baseFormat, _typeFormat.get(), &_buff->operator [](0));
-				u->end();
-			}
+			GLenum baseFormat = GLFormat::QueryInfo(_format.get())->toBase;
+			glTexImage2D(GL_TEXTURE_2D, 0, _format.get(), _size.width, _size.height, 0, baseFormat, _typeFormat.get(), &_buff->operator [](0));
 			// DeviceがActiveな時はバッファを空にしておく
 			_buff = boost::none;
 			_typeFormat = boost::none;
+		} else {
+			// とりあえず領域だけ確保しておく
+			glTexImage2D(GL_TEXTURE_2D, 0, _format.get(), _size.width, _size.height, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
 		}
+		u->end();
 	}
 }
 bool TexEmpty::operator == (const TexEmpty& t) const {
@@ -242,10 +243,6 @@ bool TexEmpty::operator == (const TexEmpty& t) const {
 
 // DeviceLostの時にこのメソッドを読んでも無意味
 void TexEmpty::writeData(GLInSizedFmt fmt, spn::AB_Byte buff, int width, GLTypeFmt srcFmt, bool bRestore) {
-	// 内部バッファは一旦リセット
-	_buff = boost::none;
-	_typeFormat = boost::none;
-
 	int height = buff.getSize() / width;
 	_size = Size(width, height);
 	_format = fmt;
