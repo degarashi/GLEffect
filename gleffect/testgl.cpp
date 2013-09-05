@@ -10,7 +10,10 @@ QString BASE_PATH("./data");
 using namespace boom::geo2d;
 using namespace spn;
 // ----------------------- TextDraw -----------------------
-TextDraw::TextDraw(HText hT): _hlText(hT), _pos(0), _pivot(Left|Top) {}
+TextDraw::TextDraw(): _pos(0), _pivot(Left|Top) {}
+void TextDraw::resetText(HText hT) {
+	_hlText = hT;
+}
 void TextDraw::setPos(const Vec2& p) {
 	_pos = p;
 }
@@ -18,22 +21,24 @@ void TextDraw::setPivot(uint32_t flag) {
 	_pivot = flag;
 }
 void TextDraw::update(float /*dt*/) {
-	auto da = mgr_test.getDrawAsset();
-	auto& t = _hlText.ref();
-	SizeF s = t.getSize();
-	s.width = 2.f / mgr_test.width();
-	s.height = 2.f / mgr_test.height();
-	Mat44 m = Mat44::Scaling(s.width, s.height, 1, 1);
-	m *= Mat44::Translation(Vec3(-1,1,0));
-	// オフセットの設定
-	GLint techID = da.gle->getTechID("TheFont");
-	da.gle->setTechnique(techID, true);
-	GLint passID = da.gle->getPassID("P0");
-	da.gle->setPass(passID);
-	GLint id = da.gle->getUniformID("mTrans");
-	da.gle->setUniform(m, id);
+	if(_hlText.valid()) {
+		auto da = mgr_test.getDrawAsset();
+		auto& t = _hlText.ref();
+		SizeF s = t.getSize();
+		s.width = 2.f / mgr_test.width();
+		s.height = 2.f / mgr_test.height();
+		Mat44 m = Mat44::Scaling(s.width, s.height, 1, 1);
+		m *= Mat44::Translation(Vec3(-1,1,0));
+		// オフセットの設定
+		GLint techID = da.gle->getTechID("TheFont");
+		da.gle->setTechnique(techID, true);
+		GLint passID = da.gle->getPassID("P0");
+		da.gle->setPass(passID);
+		GLint id = da.gle->getUniformID("mTrans");
+		da.gle->setUniform(m, id);
 
-	t.draw(da.gle);
+		t.draw(da.gle);
+	}
 }
 
 // ----------------------- Joint -----------------------
@@ -236,7 +241,6 @@ void Actor::update(float /*dt*/) {
 }
 
 HRig Actor::getHRig() const { return _hlRig.get(); }
-
 // ---------------------- TestGL ----------------------
 TestGL::TestGL(): _fontGen({512,512}), _spGrav(new resist::Gravity), _spAir(new resist::Air) {}
 TestGL::~TestGL() {
