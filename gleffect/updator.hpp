@@ -116,8 +116,11 @@ class Group {
 		template <class CB>
 		void iterate(CB&& cb) {
 			_iterate(std::forward<CB>(cb), typename std::is_same<void, decltype(std::declval<CB>()(nullptr))>::type());
-			for(auto* p : _toRem)
-				p->deleteThis();
+			for(auto* p : _toRem) {
+				auto* pn = p->deleteThis();
+				if(p == _pBegin)
+					_pBegin = pn;
+			}
 			_size -= _toRem.size();
 			_toRem.clear();
 		}

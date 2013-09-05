@@ -46,8 +46,8 @@ HEADERS  += mainwindow.h \
 	font_qt_dep.hpp \
 	font_base.hpp \
 	font.hpp \
-    lane.hpp \
-    updator.hpp
+	lane.hpp \
+	updator.hpp
 
 FORMS    += mainwindow.ui
 
