@@ -4,7 +4,9 @@
 #define GLDEFINE(name,type)		type name;
 #include "glfunc.inc"
 #undef GLDEFINE
-
+namespace {
+	bool g_bglfuncInit = false;
+}
 #if defined(_WIN32)
 	#include <windows.h>
 	namespace {
@@ -30,6 +32,9 @@
 		}
 	}
 #endif
+bool IsGLFuncLoaded() {
+	return g_bglfuncInit;
+}
 void SetSwapInterval(int n) {
 	g_setswapinterval(n);
 }
@@ -42,6 +47,7 @@ void SetSwapInterval(int n) {
 		#include "glfunc.inc"
 		// その他OS依存なAPI関数
 		LoadGLAux();
+		g_bglfuncInit = true;
 	}
 #undef GLDEFINE
 
