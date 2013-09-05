@@ -4,11 +4,13 @@
 #include <QMouseEvent>
 #include "testgl.hpp"
 #include "spinner/plane.hpp"
+#include <boost/lexical_cast.hpp>
 
 QString BASE_PATH("./data");
 
 using namespace boom::geo2d;
 using namespace spn;
+
 // ----------------------- TextDraw -----------------------
 TextDraw::TextDraw(): _pos(0), _pivot(Left|Top) {}
 void TextDraw::resetText(HText hT) {
@@ -262,14 +264,13 @@ SPVDecl TestGL::s_vDecl2D(
 );
 void TestGL::initialize() {
 	mgr_gl.onDeviceReset();
+	_gpuTime.onDeviceReset();
+	_gpuInfo.onDeviceReset();
+
+	_coreID = _fontGen.makeCoreID("Arial", CCoreID(12, 10, 0, false, 0));
+	_tdraw = SPTDraw(new TextDraw());
 
 	_hlFx = mgr_gl.loadEffect(QString(BASE_PATH) + "/test.glx");
-	std::cout	<< "OpenGL Version: " << ::glGetString(GL_VERSION) << std::endl
-				<< "OpenGL Vendor: " << ::glGetString(GL_VENDOR) << std::endl
-				<< "OpenGL Renderer: " << ::glGetString(GL_RENDERER) << std::endl
-				<< "GLSL Version: " << ::glGetString(GL_SHADING_LANGUAGE_VERSION) << std::endl
-				<< "Extensions: " << ::glGetString(GL_EXTENSIONS) << std::endl
-				<< "--------------------------------------------------------" << std::endl;
 	_spArrow = std::make_shared<Arrow>();
 	_spJoint = std::make_shared<Joint>();
 
@@ -279,6 +280,8 @@ void TestGL::initialize() {
 void TestGL::render() {
 	if(!_hlFx)
 		return;
+	_gpuTime.onFrameBegin();
+
 	glClearColor(0,0,0.5f, 1.0f);
 	glClearDepth(1.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -310,15 +313,32 @@ void TestGL::render() {
 	Visitor v(_dt);
 	_updG.iterate(v);
 	_drawG.iterate(v);
+	_gpuTime.onFrameEnd();
+
+	auto &ver = _gpuInfo.version(),
+		&slver = _gpuInfo.glslVersion(),
+		&dver = _gpuInfo.driverVersion();
+	auto tm = _gpuTime.getTime();
+	std::string tms = boost::lexical_cast<std::string>(tm);
+	std::string str((boost::format("OpenGL Version: %1%.%2%\nOpenGL Vendor: %3%\nOpenGL Renderer: %4%\nGLSL Version: %5%.%6%\nDriver Version: %7%\nDrawTime: %8%ns")
+						% ver.major % ver.minor
+					 % _gpuInfo.vendor() % _gpuInfo.renderer() % slver.major % slver.minor % dver.major % _gpuTime.getTime()).str());
+	HLText hlT = _fontGen.createText(_coreID, str);
+	_tdraw->resetText(hlT.get());
 }
 TestGL::DrawAsset TestGL::getDrawAsset() {
 	return DrawAsset{_hlFx.ref().get(), _mstack};
 }
 
 void TestGL::resetScene() {
+	mgr_gl.onDeviceLost();
+	mgr_gl.onDeviceReset();
+
 	_release();
 	_updG.clear();
 	_drawG.clear();
+
+	addDraw(0x00, SPUpdate(_tdraw));
 
 	using spn::Vec2;
 	using spn::Pose2D;

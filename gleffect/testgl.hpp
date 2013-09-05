@@ -10,6 +10,7 @@
 #include "boomstick/rigid2D.hpp"
 #include "updator.hpp"
 #include "font.hpp"
+#include "gpu.hpp"
 
 extern QString BASE_PATH;
 
@@ -78,7 +79,8 @@ class TextDraw : public IUpdate {
 	uint32_t _pivot;
 
 	public:
-		TextDraw(HText hT);
+		TextDraw();
+		void resetText(HText hT);
 		void setPos(const spn::Vec2& p);
 		void setPivot(uint32_t flag);
 		void update(float dt) override;
@@ -106,6 +108,12 @@ class TestGL : public OpenGLWindow, public spn::Singleton<TestGL> {
 	int						_nBox=3, _nIter=5;
 	boom::geo2d::HLMdl			_hlMdl;
 	boom::geo2d::ConvexModel*	_pMdl;
+
+	CCoreID		_coreID;
+	using SPTDraw = std::shared_ptr<TextDraw>;
+	SPTDraw		_tdraw;
+	GPUTime		_gpuTime;
+	GPUInfo		_gpuInfo;
 
 	using SPGrav = std::shared_ptr<boom::geo2d::resist::Gravity>;
 	using SPAir = std::shared_ptr<boom::geo2d::resist::Air>;
