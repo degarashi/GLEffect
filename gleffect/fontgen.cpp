@@ -3,6 +3,8 @@
 #include "dgassert.hpp"
 #include "glx.hpp"
 #include <map>
+#include "spinner/misc.hpp"
+#include <boost/lexical_cast.hpp>
 
 // --------------------------- Face ---------------------------
 namespace {
@@ -233,6 +235,6 @@ void FontGen::clearCache(bool bRestore) {
 std::u32string FontGen::_MakeTextTag(CCoreID cid, const std::u32string& s) {
 	// ハンドルキー = CCoreIDの64bit数値 + _ + 文字列
 	std::basic_stringstream<char32_t>	ss;
-	ss << cid.value() << U'_' << s;
+	ss << boost::lexical_cast<std::u32string>(cid.value()) << U'_' << s;
 	return ss.str();
 }
