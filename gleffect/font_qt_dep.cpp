@@ -10,11 +10,12 @@ FontArray_QtDep::FontArray_QtDep(FontArray_QtDep&& dep):
 	_font(std::move(dep._font)), _met(std::move(dep._met)), _image(std::move(dep._image)),
 	_bAA(dep._bAA)
 {}
+// フォントの周囲に１ピクセルずつの余裕をもたせる
 FontArray_QtDep::FontArray_QtDep(const std::string& name, CCoreID cid):
 	_coreID(adjustParams(cid)),
 	_font(name.c_str(), _coreID.at<CCoreID::Height>(), Weight[_coreID.at<CCoreID::Weight>()], _coreID.at<CCoreID::Italic>()),
 	_met(_font),
-	_image(_met.maxWidth(), _met.height(), QImage::Format_ARGB32),
+	_image(_met.maxWidth()+2, _met.height()+2, QImage::Format_ARGB32),
 	_bAA(_coreID.at<CCoreID::Flag>() == CCoreID::Flag_AA)
 {}
 CCoreID FontArray_QtDep::adjustParams(CCoreID cid) {
@@ -29,15 +30,16 @@ Rect FontArray_QtDep::_boundingRect(char32_t code) const {
 
 std::pair<spn::ByteBuff, Rect> FontArray_QtDep::getChara(char32_t code) {
 	Rect rct = _boundingRect(code);
+	++rct.x1; --rct.y0; ++rct.y1; --rct.x0;
 	if(rct.width() > _image.width() ||
 	   rct.height() > _image.height())
 		throw std::runtime_error("フォントサイズが不正(用意されたQImageよりフォントのほうが大きい)");
 
 	int ofs[2] = {-rct.x0, -rct.y0-1};
+	_font.setStyleStrategy((_coreID.at<CharID::Flag>() == CharID::Flag_Nothing)
+						   ? QFont::NoAntialias : QFont::PreferAntialias);
+
 	// 一旦QImageで取得して戻り値にコピー
-	_painter.setFont(_font);
-	bool bAA = _coreID.at<CharID::Flag>() == CharID::Flag_AA;
-	_painter.setRenderHint(QPainter::Antialiasing, bAA);
 	_painter.begin(&_image);
 	_painter.setFont(_font);
 	_painter.fillRect(QRect(0,0,_image.width(), _image.height()), QColor(0,0,0,255));

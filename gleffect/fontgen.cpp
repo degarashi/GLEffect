@@ -98,15 +98,14 @@ void TextObj::_init(Face& face) {
 		t = 0;
 	for(auto& c : _text) {
 		auto* p = face.getCharPos(c);
-		if(p->box.width() > 0) {
-			// 幾つのテクスチャが要るのかカウントしつつ、フォントを配置
-			if(c == U'\n') {
-				ofsy -= height;
-				ofsx = 0;
-			} else {
+		// 幾つのテクスチャが要るのかカウントしつつ、フォントを配置
+		if(c == U'\n') {
+			ofsy -= height;
+			ofsx = 0;
+		} else {
+			if(p->box.width() > 0)
 				tpM[p->hTex].emplace_back(p, ofsx, ofsy, t);
-				ofsx += p->space;
-			}
+			ofsx += p->space;
 		}
 		t += dt;
 	}
@@ -154,6 +153,7 @@ void TextObj::_init(Face& face) {
 		ds.hlIb.ref()->use()->initData(std::move(ibuff));
 	}
 }
+
 void TextObj::onCacheLost() {
 	// フォントキャッシュを消去
 	_drawSet.clear();
