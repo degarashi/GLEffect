@@ -32,7 +32,7 @@
    <bool>false</bool>
   </property>
   <widget class="QWidget" name="centralWidget">
-   <layout class="QVBoxLayout" name="verticalLayout" stretch="0,1,1">
+   <layout class="QVBoxLayout" name="verticalLayout" stretch="0,1,0,1">
     <item>
      <layout class="QGridLayout" name="gridLayout_4" rowstretch="0,0,0">
       <item row="2" column="0">
@@ -397,6 +397,22 @@
      </widget>
     </item>
     <item>
+     <widget class="QCheckBox" name="chkVSync">
+      <property name="enabled">
+       <bool>true</bool>
+      </property>
+      <property name="text">
+       <string>VSync</string>
+      </property>
+      <property name="checked">
+       <bool>true</bool>
+      </property>
+      <property name="autoRepeat">
+       <bool>false</bool>
+      </property>
+     </widget>
+    </item>
+    <item>
      <widget class="QPushButton" name="resetButton">
       <property name="font">
        <font>
@@ -538,7 +554,7 @@
    <hints>
     <hint type="sourcelabel">
      <x>183</x>
-     <y>343</y>
+     <y>336</y>
     </hint>
     <hint type="destinationlabel">
      <x>213</x>
@@ -554,7 +570,7 @@
    <hints>
     <hint type="sourcelabel">
      <x>342</x>
-     <y>343</y>
+     <y>336</y>
     </hint>
     <hint type="destinationlabel">
      <x>302</x>
@@ -570,7 +586,7 @@
    <hints>
     <hint type="sourcelabel">
      <x>177</x>
-     <y>427</y>
+     <y>406</y>
     </hint>
     <hint type="destinationlabel">
      <x>48</x>
@@ -586,7 +602,7 @@
    <hints>
     <hint type="sourcelabel">
      <x>342</x>
-     <y>427</y>
+     <y>406</y>
     </hint>
     <hint type="destinationlabel">
      <x>138</x>
@@ -642,10 +658,27 @@
     </hint>
    </hints>
   </connection>
+  <connection>
+   <sender>chkVSync</sender>
+   <signal>clicked(bool)</signal>
+   <receiver>MainWindow</receiver>
+   <slot>changeView()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>66</x>
+     <y>455</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>39</x>
+     <y>437</y>
+    </hint>
+   </hints>
+  </connection>
  </connections>
  <slots>
   <slot>changeCoeff()</slot>
   <slot>changeInitial()</slot>
   <slot>changeEnv()</slot>
+  <slot>changeView()</slot>
  </slots>
 </ui>

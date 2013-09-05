@@ -27,11 +27,13 @@ MainWindow::MainWindow(QWidget *parent): QMainWindow(parent),
 	connect(this, SIGNAL(sigCoeff(boom::RCoeff)), _view.get(), SLOT(changeCoeff(boom::RCoeff)));
 	connect(this, SIGNAL(sigEnv(SimEnv)), _view.get(), SLOT(changeEnv(SimEnv)));
 	connect(this, SIGNAL(sigInitial(SimInitial)), _view.get(), SLOT(changeInitial(SimInitial)));
+	connect(this, SIGNAL(sigView(SimView)), _view.get(), SLOT(changeView(SimView)));
 
 	// 初期値を設定
 	changeCoeff();
 	changeEnv();
 	changeInitial();
+	changeView();
 }
 
 void MainWindow::changeCoeff() {
@@ -56,4 +58,9 @@ void MainWindow::changeInitial() {
 	in.mass = _spUI->spinMassLinear->value();
 	in.inertia = _spUI->spinMassRot->value();
 	emit sigInitial(in);
+}
+void MainWindow::changeView() {
+	SimView v;
+	v.bVSync = _spUI->chkVSync->isChecked();
+	emit sigView(v);
 }

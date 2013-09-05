@@ -275,11 +275,11 @@ void TestGL::initialize() {
 	_spJoint = std::make_shared<Joint>();
 
 	resetScene();
-	SetSwapInterval(1);
 }
 void TestGL::render() {
 	if(!_hlFx)
 		return;
+	_applyVSync();
 	_gpuTime.onFrameBegin();
 
 	glClearColor(0,0,0.5f, 1.0f);
@@ -318,11 +318,9 @@ void TestGL::render() {
 	auto &ver = _gpuInfo.version(),
 		&slver = _gpuInfo.glslVersion(),
 		&dver = _gpuInfo.driverVersion();
-	auto tm = _gpuTime.getTime();
-	std::string tms = boost::lexical_cast<std::string>(tm);
-	std::string str((boost::format("OpenGL Version: %1%.%2%\nOpenGL Vendor: %3%\nOpenGL Renderer: %4%\nGLSL Version: %5%.%6%\nDriver Version: %7%\nDrawTime: %8%ns")
+	std::string str((boost::format("OpenGL Version: %1%.%2%\nOpenGL Vendor: %3%\nOpenGL Renderer: %4%\nGLSL Version: %5%.%6%\nDriver Version: %7%.%8%\nDrawTime: %9$4.3lfms")
 						% ver.major % ver.minor
-					 % _gpuInfo.vendor() % _gpuInfo.renderer() % slver.major % slver.minor % dver.major % _gpuTime.getTime()).str());
+					 % _gpuInfo.vendor() % _gpuInfo.renderer() % slver.major % slver.minor % dver.major % dver.minor % (static_cast<double>(_gpuTime.getTime()/1000)/1000)).str());
 	HLText hlT = _fontGen.createText(_coreID, str);
 	_tdraw->resetText(hlT.get());
 }
@@ -395,6 +393,25 @@ void TestGL::changeInitial(const SimInitial& in) {
 		cnv->setCacheRatio(in.inertia, TagInertia());
 	}
 }
+void TestGL::changeView(const SimView& v) {
+	int vn = v.bVSync ? 1 : 0;
+	_setVSync(vn);
+}
+void TestGL::_setVSync(int n) {
+	if(IsGLFuncLoaded())
+		SetSwapInterval(n);
+	else {
+		_bDelayVSync = true;
+		_vsyncNum = n;
+	}
+}
+void TestGL::_applyVSync() {
+	if(_bDelayVSync && IsGLFuncLoaded()) {
+		SetSwapInterval(_vsyncNum);
+		_bDelayVSync = false;
+	}
+}
+
 void TestGL::mousePressEvent(QMouseEvent* e) {
 	if(e->button() == Qt::LeftButton) {
 		QPoint pt = e->pos();

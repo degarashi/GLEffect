@@ -109,6 +109,11 @@ class TestGL : public OpenGLWindow, public spn::Singleton<TestGL> {
 	boom::geo2d::HLMdl			_hlMdl;
 	boom::geo2d::ConvexModel*	_pMdl;
 
+	bool		_bDelayVSync = false;
+	int			_vsyncNum;
+	void _applyVSync();
+	void _setVSync(int n);
+
 	CCoreID		_coreID;
 	using SPTDraw = std::shared_ptr<TextDraw>;
 	SPTDraw		_tdraw;
@@ -157,6 +162,7 @@ class TestGL : public OpenGLWindow, public spn::Singleton<TestGL> {
 		void changeEnv(const SimEnv& e);
 		void changeCoeff(const boom::RCoeff& c);
 		void changeInitial(const SimInitial& in);
+		void changeView(const SimView& v);
 
 		boom::geo2d::HRig getBox(const spn::Vec2& pos);
 };

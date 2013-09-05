@@ -46,6 +46,9 @@ struct SimEnv {
 	spn::Vec2	gravity,
 				air;
 };
+struct SimView {
+	bool	bVSync;
+};
 
 #include "boomstick/rigid2D.hpp"
 class TestGL;
@@ -61,10 +64,12 @@ class MainWindow : public QMainWindow {
 		void changeCoeff();
 		void changeEnv();
 		void changeInitial();
+		void changeView();
 	signals:
 		void sigCoeff(const boom::RCoeff& c);
 		void sigEnv(const SimEnv& e);
 		void sigInitial(const SimInitial& in);
+		void sigView(const SimView& v);
 	public:
 		explicit MainWindow(QWidget* parent=nullptr);
 };
