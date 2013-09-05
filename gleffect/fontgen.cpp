@@ -3,6 +3,8 @@
 #include "dgassert.hpp"
 #include "glx.hpp"
 #include <map>
+#include "spinner/misc.hpp"
+#include <boost/lexical_cast.hpp>
 
 // --------------------------- Face ---------------------------
 namespace {
@@ -76,6 +78,9 @@ const SPVDecl TextObj::cs_vDecl(
 TextObj::TextObj(Face& face, std::u32string&& s): _text(std::move(s)), _coreID(face.coreID), _faceName(face.faceName) {
 	_init(face);
 }
+TextObj::TextObj(TextObj&& t): _text(std::move(t._text)), _drawSet(std::move(t._drawSet)),
+	_coreID(std::move(t._coreID)), _faceName(std::move(t._faceName)), _rectSize(std::move(t._rectSize)) {}
+
 void TextObj::_init(Face& face) {
 	int height = face.dep.height();
 	// CharPosリストの作成
@@ -95,15 +100,14 @@ void TextObj::_init(Face& face) {
 		t = 0;
 	for(auto& c : _text) {
 		auto* p = face.getCharPos(c);
-		if(p->box.width() > 0) {
-			// 幾つのテクスチャが要るのかカウントしつつ、フォントを配置
-			if(c == U'\n') {
-				ofsy -= height;
-				ofsx = 0;
-			} else {
+		// 幾つのテクスチャが要るのかカウントしつつ、フォントを配置
+		if(c == U'\n') {
+			ofsy -= height;
+			ofsx = 0;
+		} else {
+			if(p->box.width() > 0)
 				tpM[p->hTex].emplace_back(p, ofsx, ofsy, t);
-				ofsx += p->space;
-			}
+			ofsx += p->space;
 		}
 		t += dt;
 	}
@@ -151,6 +155,7 @@ void TextObj::_init(Face& face) {
 		ds.hlIb.ref()->use()->initData(std::move(ibuff));
 	}
 }
+
 void TextObj::onCacheLost() {
 	// フォントキャッシュを消去
 	_drawSet.clear();
@@ -230,6 +235,6 @@ void FontGen::clearCache(bool bRestore) {
 std::u32string FontGen::_MakeTextTag(CCoreID cid, const std::u32string& s) {
 	// ハンドルキー = CCoreIDの64bit数値 + _ + 文字列
 	std::basic_stringstream<char32_t>	ss;
-	ss << cid.value() << U'_' << s;
+	ss << boost::lexical_cast<std::u32string>(cid.value()) << U'_' << s;
 	return ss.str();
 }

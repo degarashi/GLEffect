@@ -29,7 +29,8 @@ SOURCES += main.cpp\
 	glformat.cpp \
 	font_common.cpp \
 	font_qt_dep.cpp \
-	fontgen.cpp
+	fontgen.cpp \
+    gpu.cpp
 
 HEADERS  += mainwindow.h \
 	glext.h \
@@ -46,8 +47,9 @@ HEADERS  += mainwindow.h \
 	font_qt_dep.hpp \
 	font_base.hpp \
 	font.hpp \
-    lane.hpp \
-    updator.hpp
+	lane.hpp \
+	updator.hpp \
+    gpu.hpp
 
 FORMS    += mainwindow.ui
 
@@ -55,7 +57,7 @@ CONFIG += c++11
 QMAKE_CXXFLAGS_DEBUG += -DDEBUG -ggdb3 -Wno-sequence-point -Wno-unused-parameter -Wno-unused-variable
 QMAKE_CXX = 'clang++'
 QMAKE_LINK = 'clang++'
-LIBS += -lGLU -lboomstick -lspinner -lboost_system
+LIBS += -lGLU -lboomstick -lspinner -lboost_system -lboost_regex
 QMAKE_LIBDIR += /tmp/spinner_build/ \
 				/tmp/boomstick_build/
 QMAKE_INCDIR += ./boomstick/ \

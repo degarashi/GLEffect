@@ -36,7 +36,6 @@ class TextObj {
 		spn::Vec2	pos;
 		spn::Vec3	uvt;
 	};
-
 	using CPosL = std::vector<const CharPos*>;
 	struct DrawSet {
 		HTex	hTex;
@@ -58,6 +57,7 @@ class TextObj {
 	void _init(Face &face);
 
 	public:
+		TextObj(TextObj&& t);
 		/*! \param[in] dep フォントデータを生成するための環境依存クラス
 			\param[in] s 生成する文字列 */
 		TextObj(Face& face, std::u32string&& s);
@@ -121,7 +121,10 @@ class FontGen : public spn::ResMgrN<TextObj, FontGen, std::u32string> {
 			// ここでUTF32文字列に変換
 			auto str32 = spn::Text::UTFConvertTo32(spn::AbstString<T>(str));
 			// CCoreIDを付加した文字列をキーにする
-			return emplace(_MakeTextTag(cid, str32), TextObj(_getArray(cid), std::move(str32))).first;
+			auto& ar = _getArray(cid);
+			auto tag = _MakeTextTag(cid, str32);
+			LHdl lh = emplace(std::move(tag), TextObj(ar, std::move(str32))).first;
+			return std::move(lh);
 		}
 		// デバイスロストで処理が必要なのはテクスチャハンドルだけなので、
 		// onDeviceLostやonDeviceResetは特に必要ない
