@@ -31,8 +31,16 @@ struct ValueSettingR {
 	template <class GF, class... Ts>
 	void action(GF gf, Ts...) const {
 		// valueのサイズがsizeof...(Ts)と同じ前提
-		const auto* ptr = value;// + sizeof...(Ts);
+		// MEMO: 引数の評価順序に規定は無いので移植性のない記述
+#ifdef __clang__
+		// clang++ 3.4では左側から評価される
+		const auto* ptr = value;
 		gf(boost::get<Ts>(*(ptr++))...);
+#else
+		// g++ 4.8.1では右側から評価される
+		const auto* ptr = value + sizeof...(Ts);
+		gf(boost::get<Ts>(*(--ptr))...);
+#endif
 	}
 	bool operator == (const ValueSettingR& s) const;
 };
