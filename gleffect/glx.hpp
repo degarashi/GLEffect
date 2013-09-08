@@ -28,20 +28,15 @@ struct ValueSettingR {
 
 	explicit ValueSettingR(const ValueSetting& s);
 	void action() const;
-	template <class GF, class... Ts>
-	void action(GF gf, Ts...) const {
-		// valueのサイズがsizeof...(Ts)と同じ前提
-		// MEMO: 引数の評価順序に規定は無いので移植性のない記述
-#ifdef __clang__
-		// clang++ 3.4では左側から評価される
-		const auto* ptr = value;
-		gf(boost::get<Ts>(*(ptr++))...);
-#else
-		// g++ 4.8.1では右側から評価される
-		const auto* ptr = value + sizeof...(Ts);
-		gf(boost::get<Ts>(*(--ptr))...);
-#endif
-	}
+	template <class GF, class T0>
+	void action(GF gf, T0) const { gf(boost::get<T0>(value[0])); }
+	template <class GF, class T0, class T1>
+	void action(GF gf, T0,T1) const { gf(boost::get<T0>(value[0]), boost::get<T1>(value[1])); }
+	template <class GF, class T0, class T1, class T2>
+	void action(GF gf, T0,T1,T2) const { gf(boost::get<T0>(value[0]), boost::get<T1>(value[1]), boost::get<T2>(value[2])); }
+	template <class GF, class T0, class T1, class T2, class T3>
+	void action(GF gf, T0,T1,T2,T3) const { gf(boost::get<T0>(value[0]), boost::get<T1>(value[1]), boost::get<T2>(value[2]), boost::get<T3>(value[3])); }
+
 	bool operator == (const ValueSettingR& s) const;
 };
 //! OpenGLのBool値設定クラス
